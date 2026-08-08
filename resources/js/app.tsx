@@ -22,6 +22,11 @@ createInertiaApp({
             case name.startsWith('pages/'):
                 return null;
 
+            // The customer dashboard chooses between the existing application
+            // layout and the selected storefront theme at runtime.
+            case name === 'dashboard':
+                return null;
+
             case name.startsWith('auth/'):
                 return AuthLayout;
 

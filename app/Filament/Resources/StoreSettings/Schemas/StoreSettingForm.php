@@ -35,7 +35,8 @@ class StoreSettingForm
                     ->required()
                     ->helperText(
                         'Controls the customer-facing design for supported '
-                        .'storefront pages, including the home page and cart.',
+                        .'storefront pages, including Home, Shop, Product '
+                        .'Detail, Cart, and Account.',
                     ),
 
                 TextInput::make('store_email')
