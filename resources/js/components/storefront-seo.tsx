@@ -146,29 +146,67 @@ export function StorefrontSeo() {
 
     return (
         <Head>
-            <meta name="robots" content={robots} />
+            <meta head-key="robots" name="robots" content={robots} />
 
-            {description && <meta name="description" content={description} />}
+            {description ? (
+                <meta
+                    head-key="description"
+                    name="description"
+                    content={description}
+                />
+            ) : null}
 
-            {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+            {canonicalUrl ? (
+                <link
+                    head-key="canonical"
+                    rel="canonical"
+                    href={canonicalUrl}
+                />
+            ) : null}
 
-            {canonicalUrl && (
-                <>
-                    <meta property="og:type" content={type} />
-                    <meta property="og:site_name" content={storeName} />
-                    <meta property="og:title" content={openGraphTitle} />
+            {canonicalUrl ? (
+                <meta head-key="og:type" property="og:type" content={type} />
+            ) : null}
 
-                    {description && (
-                        <meta property="og:description" content={description} />
-                    )}
+            {canonicalUrl ? (
+                <meta
+                    head-key="og:site_name"
+                    property="og:site_name"
+                    content={storeName}
+                />
+            ) : null}
 
-                    <meta property="og:url" content={canonicalUrl} />
+            {canonicalUrl ? (
+                <meta
+                    head-key="og:title"
+                    property="og:title"
+                    content={openGraphTitle}
+                />
+            ) : null}
 
-                    {absoluteImageUrl && (
-                        <meta property="og:image" content={absoluteImageUrl} />
-                    )}
-                </>
-            )}
+            {canonicalUrl && description ? (
+                <meta
+                    head-key="og:description"
+                    property="og:description"
+                    content={description}
+                />
+            ) : null}
+
+            {canonicalUrl ? (
+                <meta
+                    head-key="og:url"
+                    property="og:url"
+                    content={canonicalUrl}
+                />
+            ) : null}
+
+            {canonicalUrl && absoluteImageUrl ? (
+                <meta
+                    head-key="og:image"
+                    property="og:image"
+                    content={absoluteImageUrl}
+                />
+            ) : null}
         </Head>
     );
 }
