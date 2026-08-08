@@ -1,5 +1,7 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
+import FashionElegantContentPage from '@/components/content-pages/fashion-elegant-content-page';
 import StorefrontLayout from '@/layouts/storefront-layout';
+import type { CatalogCategory } from '@/types';
 
 type ContentPage = {
     title: string;
@@ -13,7 +15,36 @@ type ContentPageProps = {
     contentPage: ContentPage;
 };
 
+type ContentPageSharedProps = {
+    store?: {
+        name?: string;
+        email?: string | null;
+        contact_number?: string | null;
+        business_address?: string | null;
+        theme?: 'default' | 'fashion_editorial';
+        navigation_categories?: CatalogCategory[];
+    };
+};
+
 export default function ContentPageShow({ contentPage }: ContentPageProps) {
+    const page = usePage();
+
+    const sharedProps = page.props as unknown as ContentPageSharedProps;
+
+    const store = sharedProps.store;
+
+    const isFashionElegant = store?.theme === 'fashion_editorial';
+
+    if (isFashionElegant) {
+        return (
+            <FashionElegantContentPage
+                contentPage={contentPage}
+                store={store}
+                navigationCategories={store?.navigation_categories ?? []}
+            />
+        );
+    }
+
     return (
         <StorefrontLayout>
             <Head title={contentPage.meta_title} />
