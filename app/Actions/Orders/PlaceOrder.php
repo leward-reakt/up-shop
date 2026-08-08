@@ -10,11 +10,14 @@ use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Notifications\OrderPlacedNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class PlaceOrder
 {
@@ -38,7 +41,7 @@ class PlaceOrder
             ]);
         }
 
-        return DB::transaction(
+        $order = DB::transaction(
             function () use (
                 $user,
                 $cartQuantities,
@@ -116,8 +119,8 @@ class PlaceOrder
                     (string) $data['payment_method'],
                 );
 
-                // Totals are recalculated inside the transaction using
-                // current product prices and the current discount rules.
+                // Recalculate all totals inside the transaction using current
+                // prices, discounts, shipping settings, and tax settings.
                 $totals = $this->calculateCheckoutTotals->handle(
                     items: $items,
                     discountCode: $discountCode,
@@ -192,9 +195,8 @@ class PlaceOrder
                         'subtotal' => $product->price * $quantity,
                     ]);
 
-                    // Keep a conditional stock guard even after lockForUpdate.
-                    // This keeps checkout safe if locking semantics differ
-                    // between the local SQLite and production database.
+                    // Keep the conditional guard even after lockForUpdate.
+                    // This preserves checkout safety across SQLite and MySQL.
                     $updatedRows = Product::query()
                         ->whereKey($product->id)
                         ->where(
@@ -234,8 +236,8 @@ class PlaceOrder
                     'notes' => null,
                 ]);
 
-                // Authenticated carts are database-backed and therefore can
-                // be cleared as part of the same transaction.
+                // Authenticated carts are database-backed and can be cleared
+                // inside the same transaction as the completed order.
                 if ($user !== null) {
                     $cart = $user->cart()->first();
 
@@ -249,6 +251,28 @@ class PlaceOrder
             },
             3,
         );
+
+        $this->notifyCustomer($order);
+
+        return $order;
+    }
+
+    private function notifyCustomer(Order $order): void
+    {
+        try {
+            Notification::route(
+                'mail',
+                [
+                    $order->customer_email => $order->customer_name,
+                ],
+            )->notify(
+                new OrderPlacedNotification($order),
+            );
+        } catch (Throwable $exception) {
+            // Email delivery must never roll back or invalidate a successfully
+            // committed customer order.
+            report($exception);
+        }
     }
 
     private function nullableString(mixed $value): ?string

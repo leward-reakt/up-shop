@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Account\AddressController as AccountAddressController;
+use App\Http\Controllers\Account\DashboardController as AccountDashboardController;
+use App\Http\Controllers\Account\OrderController as AccountOrderController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
@@ -43,8 +46,29 @@ Route::get('/checkout/success', [CheckoutController::class, 'success'])
     ->name('checkout.success');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')
+    Route::get('/dashboard', AccountDashboardController::class)
         ->name('dashboard');
+
+    Route::get('/account/orders', [AccountOrderController::class, 'index'])
+        ->name('account.orders.index');
+
+    Route::get('/account/orders/{order}', [AccountOrderController::class, 'show'])
+        ->name('account.orders.show');
+
+    Route::get('/account/addresses', [AccountAddressController::class, 'index'])
+        ->name('account.addresses.index');
+
+    Route::post('/account/addresses', [AccountAddressController::class, 'store'])
+        ->name('account.addresses.store');
+
+    Route::get('/account/addresses/{address}/edit', [AccountAddressController::class, 'edit'])
+        ->name('account.addresses.edit');
+
+    Route::patch('/account/addresses/{address}', [AccountAddressController::class, 'update'])
+        ->name('account.addresses.update');
+
+    Route::delete('/account/addresses/{address}', [AccountAddressController::class, 'destroy'])
+        ->name('account.addresses.destroy');
 });
 
 require __DIR__.'/settings.php';

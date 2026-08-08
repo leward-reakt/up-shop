@@ -5,8 +5,11 @@ namespace App\Actions\Orders;
 use App\Enums\OrderStatus;
 use App\Enums\ShippingMethod;
 use App\Models\Order;
+use App\Notifications\OrderStatusChangedNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class UpdateOrderStatus
 {
@@ -14,34 +17,58 @@ class UpdateOrderStatus
         Order $order,
         OrderStatus $status,
     ): Order {
-        return DB::transaction(function () use (
-            $order,
-            $status,
-        ): Order {
-            $lockedOrder = Order::query()
-                ->lockForUpdate()
-                ->findOrFail($order->id);
+        $statusChanged = false;
 
-            if ($lockedOrder->order_status === $status) {
-                return $lockedOrder;
-            }
+        $updatedOrder = DB::transaction(
+            function () use (
+                $order,
+                $status,
+                &$statusChanged,
+            ): Order {
+                $lockedOrder = Order::query()
+                    ->lockForUpdate()
+                    ->findOrFail($order->id);
 
-            $allowedStatuses = self::allowedNextStatuses(
-                $lockedOrder,
-            );
+                if ($lockedOrder->order_status === $status) {
+                    return $lockedOrder;
+                }
 
-            if (! in_array($status, $allowedStatuses, true)) {
-                throw ValidationException::withMessages([
-                    'order_status' => 'That order status transition is not allowed.',
+                $allowedStatuses = self::allowedNextStatuses(
+                    $lockedOrder,
+                );
+
+                if (! in_array($status, $allowedStatuses, true)) {
+                    throw ValidationException::withMessages([
+                        'order_status' => 'That order status transition is not allowed.',
+                    ]);
+                }
+
+                $lockedOrder->update([
+                    'order_status' => $status,
                 ]);
-            }
 
-            $lockedOrder->update([
-                'order_status' => $status,
-            ]);
+                $statusChanged = true;
 
-            return $lockedOrder->refresh();
-        });
+                return $lockedOrder->refresh();
+            },
+        );
+
+        if (
+            $statusChanged
+            && in_array(
+                $status,
+                [
+                    OrderStatus::Processing,
+                    OrderStatus::Shipped,
+                    OrderStatus::Completed,
+                ],
+                true,
+            )
+        ) {
+            $this->notifyCustomer($updatedOrder);
+        }
+
+        return $updatedOrder;
     }
 
     /**
@@ -73,5 +100,21 @@ class UpdateOrderStatus
             OrderStatus::Completed,
             OrderStatus::Cancelled => [],
         };
+    }
+
+    private function notifyCustomer(Order $order): void
+    {
+        try {
+            Notification::route(
+                'mail',
+                [
+                    $order->customer_email => $order->customer_name,
+                ],
+            )->notify(
+                new OrderStatusChangedNotification($order),
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 }
