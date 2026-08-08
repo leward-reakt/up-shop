@@ -1,13 +1,378 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Price } from '@/components/price';
 import StorefrontLayout from '@/layouts/storefront-layout';
-import type { CheckoutOrder } from '@/types';
+import type { CatalogCategory, CheckoutOrder } from '@/types';
 
 type CheckoutSuccessProps = {
     order: CheckoutOrder;
 };
 
+type CheckoutSuccessSharedProps = {
+    store?: {
+        theme?: 'default' | 'fashion_editorial';
+        navigation_categories?: CatalogCategory[];
+    };
+};
+
 export default function CheckoutSuccess({ order }: CheckoutSuccessProps) {
+    const page = usePage();
+
+    const sharedProps = page.props as unknown as CheckoutSuccessSharedProps;
+
+    const isFashionEditorial = sharedProps.store?.theme === 'fashion_editorial';
+
+    const navigationCategories = sharedProps.store?.navigation_categories ?? [];
+
+    if (isFashionEditorial) {
+        return (
+            <StorefrontLayout
+                variant="fashion-editorial"
+                navigationCategories={navigationCategories}
+            >
+                <Head title="Order confirmed" />
+
+                <section className="bg-[#f8f6f1]">
+                    <div className="mx-auto max-w-[1600px] px-5 py-14 sm:px-8 sm:py-20 lg:px-14 lg:py-24">
+                        <header className="border-b border-neutral-300 pb-10 sm:pb-14">
+                            <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                                Order received
+                            </p>
+
+                            <h1 className="mt-4 max-w-4xl font-serif text-5xl leading-[0.98] tracking-[-0.035em] sm:text-6xl lg:text-7xl">
+                                Thank you, {order.customer_name}.
+                            </h1>
+
+                            <p className="mt-6 max-w-2xl text-sm leading-7 text-neutral-600">
+                                Your order has been placed successfully. Order
+                                details have been recorded for{' '}
+                                <span className="text-neutral-950">
+                                    {order.customer_email}
+                                </span>
+                                .
+                            </p>
+                        </header>
+
+                        <section className="grid border-b border-neutral-300 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="border-b border-neutral-300 py-6 sm:border-r sm:pr-6 lg:border-b-0">
+                                <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                    Order number
+                                </p>
+
+                                <p className="mt-3 font-serif text-lg">
+                                    {order.order_number}
+                                </p>
+                            </div>
+
+                            <div className="border-b border-neutral-300 py-6 sm:pl-6 lg:border-r lg:border-b-0 lg:pr-6">
+                                <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                    Order status
+                                </p>
+
+                                <p className="mt-3 font-serif text-lg">
+                                    {order.order_status_label}
+                                </p>
+                            </div>
+
+                            <div className="border-b border-neutral-300 py-6 sm:border-r sm:pr-6 lg:border-b-0 lg:pl-6">
+                                <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                    Payment method
+                                </p>
+
+                                <p className="mt-3 font-serif text-lg">
+                                    {order.payment_method_label}
+                                </p>
+                            </div>
+
+                            <div className="py-6 sm:pl-6">
+                                <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                    Payment status
+                                </p>
+
+                                <p className="mt-3 font-serif text-lg">
+                                    {order.payment_status_label}
+                                </p>
+                            </div>
+                        </section>
+
+                        <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-20">
+                            <div>
+                                {order.payment_method === 'bank_transfer' && (
+                                    <section className="border-y border-neutral-300 bg-[#eee8e1] px-5 py-6 sm:px-6">
+                                        <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                            Payment
+                                        </p>
+
+                                        <h2 className="mt-3 font-serif text-2xl tracking-[-0.02em]">
+                                            Bank transfer
+                                        </h2>
+
+                                        <p className="mt-3 max-w-xl text-sm leading-7 text-neutral-600">
+                                            Your payment is pending manual bank
+                                            transfer verification. Store payment
+                                            instructions can be provided
+                                            separately once configured by the
+                                            administrator.
+                                        </p>
+                                    </section>
+                                )}
+
+                                {order.payment_method ===
+                                    'cash_on_delivery' && (
+                                    <section className="border-y border-neutral-300 bg-[#eee8e1] px-5 py-6 sm:px-6">
+                                        <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                            Payment
+                                        </p>
+
+                                        <h2 className="mt-3 font-serif text-2xl tracking-[-0.02em]">
+                                            Cash on Delivery
+                                        </h2>
+
+                                        <p className="mt-3 max-w-xl text-sm leading-7 text-neutral-600">
+                                            Payment will remain pending until
+                                            the amount is collected and
+                                            confirmed.
+                                        </p>
+                                    </section>
+                                )}
+
+                                <section className="border-b border-neutral-300 py-10">
+                                    <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+                                        Your selection
+                                    </p>
+
+                                    <h2 className="mt-3 font-serif text-3xl tracking-[-0.025em]">
+                                        Order items
+                                    </h2>
+
+                                    <div className="mt-8 border-t border-neutral-300">
+                                        {order.items.map((item) => (
+                                            <div
+                                                key={`${item.sku}-${item.product_name}`}
+                                                className="grid gap-4 border-b border-neutral-300 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+                                            >
+                                                <div>
+                                                    <p className="font-serif text-lg leading-6">
+                                                        {item.product_name}
+                                                    </p>
+
+                                                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[9px] font-medium tracking-[0.12em] text-neutral-500 uppercase">
+                                                        <span>
+                                                            SKU {item.sku}
+                                                        </span>
+
+                                                        <span>
+                                                            Quantity{' '}
+                                                            {item.quantity}
+                                                        </span>
+
+                                                        <span>
+                                                            Unit{' '}
+                                                            <Price
+                                                                amount={
+                                                                    item.unit_price
+                                                                }
+                                                            />
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <Price
+                                                    amount={item.subtotal}
+                                                    className="font-serif text-lg"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+
+                                <section className="border-b border-neutral-300 py-10">
+                                    <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+                                        Delivery
+                                    </p>
+
+                                    <h2 className="mt-3 font-serif text-3xl tracking-[-0.025em]">
+                                        Shipping details
+                                    </h2>
+
+                                    <div className="mt-8 grid gap-8 sm:grid-cols-2">
+                                        <div>
+                                            <p className="text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                                                Shipping method
+                                            </p>
+
+                                            <p className="mt-3 font-serif text-lg">
+                                                {order.shipping_method_label}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                                                Delivery address
+                                            </p>
+
+                                            <address className="mt-3 text-sm leading-7 text-neutral-600 not-italic">
+                                                {
+                                                    order.shipping_address
+                                                        .address_line_1
+                                                }
+                                                {order.shipping_address
+                                                    .address_line_2 && (
+                                                    <>
+                                                        <br />
+
+                                                        {
+                                                            order
+                                                                .shipping_address
+                                                                .address_line_2
+                                                        }
+                                                    </>
+                                                )}
+                                                <br />
+                                                {order.shipping_address.city},{' '}
+                                                {
+                                                    order.shipping_address
+                                                        .province
+                                                }{' '}
+                                                {
+                                                    order.shipping_address
+                                                        .postal_code
+                                                }
+                                                <br />
+                                                Philippines
+                                            </address>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div className="flex flex-col gap-3 py-10 sm:flex-row">
+                                    <Link
+                                        href="/shop"
+                                        className="inline-flex min-h-12 items-center justify-center border border-neutral-950 bg-neutral-950 px-7 text-[10px] font-medium tracking-[0.16em] text-white uppercase transition duration-300 hover:bg-transparent hover:text-neutral-950"
+                                    >
+                                        Continue shopping
+                                    </Link>
+
+                                    <Link
+                                        href="/"
+                                        className="inline-flex min-h-12 items-center justify-center border border-neutral-950 px-7 text-[10px] font-medium tracking-[0.16em] uppercase transition duration-300 hover:bg-neutral-950 hover:text-white"
+                                    >
+                                        Back to home
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <aside className="lg:border-l lg:border-neutral-300 lg:pl-10 xl:pl-12">
+                                <div className="sticky top-6">
+                                    <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
+                                        Order summary
+                                    </p>
+
+                                    <h2 className="mt-3 font-serif text-3xl tracking-[-0.025em]">
+                                        Total
+                                    </h2>
+
+                                    <dl className="mt-8 border-t border-neutral-300 text-sm">
+                                        <div className="flex justify-between gap-6 border-b border-neutral-300 py-4">
+                                            <dt className="text-xs text-neutral-600">
+                                                Subtotal
+                                            </dt>
+
+                                            <dd>
+                                                <Price
+                                                    amount={order.subtotal}
+                                                />
+                                            </dd>
+                                        </div>
+
+                                        {order.discount_total > 0 && (
+                                            <div className="flex justify-between gap-6 border-b border-neutral-300 py-4">
+                                                <dt className="text-xs text-neutral-600">
+                                                    Discount
+                                                    {order.discount_code
+                                                        ? ` (${order.discount_code})`
+                                                        : ''}
+                                                </dt>
+
+                                                <dd>
+                                                    −
+                                                    <Price
+                                                        amount={
+                                                            order.discount_total
+                                                        }
+                                                    />
+                                                </dd>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between gap-6 border-b border-neutral-300 py-4">
+                                            <dt className="text-xs text-neutral-600">
+                                                Shipping
+                                            </dt>
+
+                                            <dd>
+                                                {order.shipping_total === 0 ? (
+                                                    'Free'
+                                                ) : (
+                                                    <Price
+                                                        amount={
+                                                            order.shipping_total
+                                                        }
+                                                    />
+                                                )}
+                                            </dd>
+                                        </div>
+
+                                        {order.tax_total > 0 && (
+                                            <div className="flex justify-between gap-6 border-b border-neutral-300 py-4">
+                                                <dt className="text-xs text-neutral-600">
+                                                    Tax
+                                                </dt>
+
+                                                <dd>
+                                                    <Price
+                                                        amount={order.tax_total}
+                                                    />
+                                                </dd>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-end justify-between gap-6 py-5">
+                                            <dt className="font-serif text-xl">
+                                                Grand total
+                                            </dt>
+
+                                            <dd>
+                                                <Price
+                                                    amount={order.grand_total}
+                                                    className="font-serif text-xl"
+                                                />
+                                            </dd>
+                                        </div>
+                                    </dl>
+
+                                    <div className="mt-7 border-t border-neutral-300 pt-7">
+                                        <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                            Reference
+                                        </p>
+
+                                        <p className="mt-3 font-serif text-lg break-all">
+                                            {order.order_number}
+                                        </p>
+
+                                        <p className="mt-4 text-xs leading-6 text-neutral-500">
+                                            Keep this order number for your
+                                            records and future order inquiries.
+                                        </p>
+                                    </div>
+                                </div>
+                            </aside>
+                        </div>
+                    </div>
+                </section>
+            </StorefrontLayout>
+        );
+    }
+
     return (
         <StorefrontLayout>
             <Head title="Order confirmed" />
@@ -140,6 +505,7 @@ export default function CheckoutSuccess({ order }: CheckoutSuccessProps) {
                             {order.shipping_address.address_line_2 && (
                                 <>
                                     <br />
+
                                     {order.shipping_address.address_line_2}
                                 </>
                             )}

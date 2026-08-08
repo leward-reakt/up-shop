@@ -55,11 +55,9 @@ export default function Checkout({
 
     const sharedProps = page.props as unknown as CheckoutSharedProps;
 
-    const isFashionEditorial =
-        sharedProps.store?.theme === 'fashion_editorial';
+    const isFashionEditorial = sharedProps.store?.theme === 'fashion_editorial';
 
-    const navigationCategories =
-        sharedProps.store?.navigation_categories ?? [];
+    const navigationCategories = sharedProps.store?.navigation_categories ?? [];
 
     const [addressDialogOpen, setAddressDialogOpen] = useState(false);
 
@@ -412,9 +410,7 @@ export default function Checkout({
                                             onClick={() =>
                                                 setAddressDialogOpen(true)
                                             }
-                                            className={
-                                                secondaryActionClassName
-                                            }
+                                            className={secondaryActionClassName}
                                         >
                                             Use different address
                                         </button>
@@ -431,8 +427,8 @@ export default function Checkout({
                                     >
                                         Your contact information and shipping
                                         address will be saved as your default
-                                        address after your order is
-                                        successfully placed.
+                                        address after your order is successfully
+                                        placed.
                                     </p>
                                 )}
 
@@ -454,9 +450,7 @@ export default function Checkout({
                                             id="shipping_address_line_1"
                                             type="text"
                                             autoComplete="address-line1"
-                                            value={
-                                                data.shipping_address_line_1
-                                            }
+                                            value={data.shipping_address_line_1}
                                             disabled={hasSavedAddresses}
                                             onChange={(event) =>
                                                 setData(
@@ -496,9 +490,7 @@ export default function Checkout({
                                             id="shipping_address_line_2"
                                             type="text"
                                             autoComplete="address-line2"
-                                            value={
-                                                data.shipping_address_line_2
-                                            }
+                                            value={data.shipping_address_line_2}
                                             disabled={hasSavedAddresses}
                                             onChange={(event) =>
                                                 setData(
@@ -778,8 +770,8 @@ export default function Checkout({
                                                 : 'mt-4 text-sm leading-6 text-neutral-600'
                                         }
                                     >
-                                        Your order will remain pending until
-                                        the bank transfer is manually verified.
+                                        Your order will remain pending until the
+                                        bank transfer is manually verified.
                                     </p>
                                 )}
 
@@ -816,7 +808,7 @@ export default function Checkout({
                                     placeholder="Optional delivery or order instructions"
                                     className={
                                         isFashionEditorial
-                                            ? 'mt-7 min-h-32 w-full resize-y border border-neutral-300 bg-transparent p-4 text-sm leading-6 outline-none transition placeholder:text-neutral-400 focus:border-neutral-950'
+                                            ? 'mt-7 min-h-32 w-full resize-y border border-neutral-300 bg-transparent p-4 text-sm leading-6 transition outline-none placeholder:text-neutral-400 focus:border-neutral-950'
                                             : 'mt-5 w-full rounded-lg border px-3 py-2'
                                     }
                                 />
@@ -870,8 +862,7 @@ export default function Checkout({
                                                     </Link>
 
                                                     <p className="mt-2 text-[9px] font-medium tracking-[0.12em] text-neutral-500 uppercase">
-                                                        Quantity{' '}
-                                                        {item.quantity}
+                                                        Quantity {item.quantity}
                                                     </p>
                                                 </div>
 
@@ -922,8 +913,7 @@ export default function Checkout({
                                             </dt>
 
                                             <dd>
-                                                {totals.shipping_total ===
-                                                0 ? (
+                                                {totals.shipping_total === 0 ? (
                                                     'Free'
                                                 ) : (
                                                     <Price
@@ -958,9 +948,7 @@ export default function Checkout({
 
                                             <dd>
                                                 <Price
-                                                    amount={
-                                                        totals.grand_total
-                                                    }
+                                                    amount={totals.grand_total}
                                                     className="font-serif text-xl"
                                                 />
                                             </dd>
@@ -1204,28 +1192,22 @@ export default function Checkout({
                                             <p className="mt-2 text-sm leading-6 text-neutral-600">
                                                 {address.recipient_name}
                                                 <br />
-
                                                 {address.email && (
                                                     <>
                                                         {address.email}
                                                         <br />
                                                     </>
                                                 )}
-
                                                 {address.phone}
                                                 <br />
                                                 {address.address_line_1}
                                                 <br />
-
                                                 {address.address_line_2 && (
                                                     <>
-                                                        {
-                                                            address.address_line_2
-                                                        }
+                                                        {address.address_line_2}
                                                         <br />
                                                     </>
                                                 )}
-
                                                 {address.city},{' '}
                                                 {address.province}{' '}
                                                 {address.postal_code}

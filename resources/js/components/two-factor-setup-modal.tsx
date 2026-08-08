@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, Copy, ScanLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,7 +23,25 @@ import { useClipboard } from '@/hooks/use-clipboard';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
 import { confirm } from '@/routes/two-factor';
 
-function GridScanIcon() {
+type SharedProps = {
+    store?: {
+        theme?: 'default' | 'fashion_editorial';
+    };
+};
+
+function GridScanIcon({ isFashionEditorial }: { isFashionEditorial: boolean }) {
+    if (isFashionEditorial) {
+        return (
+            <div className="mb-5 flex size-12 items-center justify-center border border-neutral-300">
+                <ScanLine
+                    className="size-5 text-neutral-700"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="mb-3 rounded-full border border-border bg-card p-0.5 shadow-sm">
             <div className="relative overflow-hidden rounded-full border border-border bg-muted p-2.5">
@@ -35,6 +53,7 @@ function GridScanIcon() {
                         />
                     ))}
                 </div>
+
                 <div className="absolute inset-0 grid grid-rows-5 opacity-50">
                     {Array.from({ length: 5 }, (_, i) => (
                         <div
@@ -43,6 +62,7 @@ function GridScanIcon() {
                         />
                     ))}
                 </div>
+
                 <ScanLine className="relative z-20 size-6 text-foreground" />
             </div>
         </div>
@@ -55,16 +75,110 @@ function TwoFactorSetupStep({
     buttonText,
     onNextStep,
     errors,
+    isFashionEditorial,
 }: {
     qrCodeSvg: string | null;
     manualSetupKey: string | null;
     buttonText: string;
     onNextStep: () => void;
     errors: string[];
+    isFashionEditorial: boolean;
 }) {
     const { resolvedAppearance } = useAppearance();
+
     const [copiedText, copy] = useClipboard();
+
     const IconComponent = copiedText === manualSetupKey ? Check : Copy;
+
+    if (isFashionEditorial) {
+        return (
+            <>
+                {errors?.length ? (
+                    <AlertError errors={errors} />
+                ) : (
+                    <>
+                        <div className="w-full">
+                            <p className="mb-4 text-center text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                                Scan QR code
+                            </p>
+
+                            <div className="mx-auto aspect-square w-64 border border-neutral-300 bg-white p-5">
+                                {qrCodeSvg ? (
+                                    <div
+                                        className="aspect-square size-full bg-white p-1 [&_svg]:size-full"
+                                        dangerouslySetInnerHTML={{
+                                            __html: qrCodeSvg,
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="flex size-full items-center justify-center">
+                                        <Spinner />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={onNextStep}
+                            className="inline-flex min-h-11 w-full items-center justify-center border border-neutral-950 bg-neutral-950 px-6 text-[9px] font-medium tracking-[0.14em] text-white uppercase transition hover:bg-transparent hover:text-neutral-950"
+                        >
+                            {buttonText}
+                        </button>
+
+                        <div className="relative flex w-full items-center justify-center py-2">
+                            <div className="absolute inset-x-0 top-1/2 border-t border-neutral-300" />
+
+                            <span className="relative bg-[#f8f6f1] px-4 text-[9px] font-medium tracking-[0.12em] text-neutral-500 uppercase">
+                                Or enter manually
+                            </span>
+                        </div>
+
+                        <div className="w-full">
+                            <p className="mb-2 text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                                Setup key
+                            </p>
+
+                            <div className="flex min-h-12 w-full items-stretch border border-neutral-300">
+                                {!manualSetupKey ? (
+                                    <div className="flex w-full items-center justify-center p-3">
+                                        <Spinner />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={manualSetupKey}
+                                            className="min-w-0 flex-1 bg-transparent px-4 py-3 font-mono text-sm text-neutral-950 outline-none"
+                                            aria-label="Two-factor authentication setup key"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => copy(manualSetupKey)}
+                                            className="flex w-12 shrink-0 items-center justify-center border-l border-neutral-300 text-neutral-600 transition hover:bg-neutral-950 hover:text-white"
+                                            aria-label="Copy setup key"
+                                        >
+                                            <IconComponent
+                                                className="size-4"
+                                                aria-hidden="true"
+                                            />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            <p className="mt-3 text-xs leading-6 text-neutral-500">
+                                Enter this key in your authenticator application
+                                if you cannot scan the QR code.
+                            </p>
+                        </div>
+                    </>
+                )}
+            </>
+        );
+    }
 
     return (
         <>
@@ -103,6 +217,7 @@ function TwoFactorSetupStep({
 
                     <div className="relative flex w-full items-center justify-center">
                         <div className="absolute inset-0 top-1/2 h-px w-full bg-border" />
+
                         <span className="relative bg-card px-2 py-1">
                             or, enter the code manually
                         </span>
@@ -122,9 +237,12 @@ function TwoFactorSetupStep({
                                         value={manualSetupKey}
                                         className="h-full w-full bg-background p-3 text-foreground outline-none"
                                     />
+
                                     <button
+                                        type="button"
                                         onClick={() => copy(manualSetupKey)}
                                         className="border-l border-border px-3 hover:bg-muted"
+                                        aria-label="Copy setup key"
                                     >
                                         <IconComponent className="w-4" />
                                     </button>
@@ -141,11 +259,14 @@ function TwoFactorSetupStep({
 function TwoFactorVerificationStep({
     onClose,
     onBack,
+    isFashionEditorial,
 }: {
     onClose: () => void;
     onBack: () => void;
+    isFashionEditorial: boolean;
 }) {
     const [code, setCode] = useState<string>('');
+
     const pinInputContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -160,48 +281,86 @@ function TwoFactorVerificationStep({
             onSuccess={() => onClose()}
             resetOnError
             resetOnSuccess
+            className="w-full"
         >
             {({
                 processing,
                 errors,
             }: {
                 processing: boolean;
-                errors?: { confirmTwoFactorAuthentication?: { code?: string } };
+                errors?: {
+                    confirmTwoFactorAuthentication?: {
+                        code?: string;
+                    };
+                };
             }) => (
-                <>
-                    <div
-                        ref={pinInputContainerRef}
-                        className="relative w-full space-y-3"
-                    >
-                        <div className="flex w-full flex-col items-center space-y-3 py-2">
-                            <InputOTP
-                                id="otp"
-                                name="code"
-                                maxLength={OTP_MAX_LENGTH}
-                                onChange={setCode}
-                                disabled={processing}
-                                pattern={REGEXP_ONLY_DIGITS}
-                                autoFocus
-                            >
-                                <InputOTPGroup>
-                                    {Array.from(
-                                        { length: OTP_MAX_LENGTH },
-                                        (_, index) => (
-                                            <InputOTPSlot
-                                                key={index}
-                                                index={index}
-                                            />
-                                        ),
-                                    )}
-                                </InputOTPGroup>
-                            </InputOTP>
-                            <InputError
-                                message={
-                                    errors?.confirmTwoFactorAuthentication?.code
-                                }
-                            />
-                        </div>
+                <div
+                    ref={pinInputContainerRef}
+                    className="relative w-full space-y-6"
+                >
+                    <div className="flex w-full flex-col items-center space-y-4 py-2">
+                        {isFashionEditorial && (
+                            <p className="text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                                Authentication code
+                            </p>
+                        )}
 
+                        <InputOTP
+                            id="otp"
+                            name="code"
+                            maxLength={OTP_MAX_LENGTH}
+                            onChange={setCode}
+                            disabled={processing}
+                            pattern={REGEXP_ONLY_DIGITS}
+                            autoFocus
+                        >
+                            <InputOTPGroup>
+                                {Array.from(
+                                    { length: OTP_MAX_LENGTH },
+                                    (_, index) => (
+                                        <InputOTPSlot
+                                            key={index}
+                                            index={index}
+                                            className={
+                                                isFashionEditorial
+                                                    ? 'h-11 w-11 border-neutral-300 bg-transparent text-base shadow-none first:rounded-none last:rounded-none'
+                                                    : undefined
+                                            }
+                                        />
+                                    ),
+                                )}
+                            </InputOTPGroup>
+                        </InputOTP>
+
+                        <InputError
+                            message={
+                                errors?.confirmTwoFactorAuthentication?.code
+                            }
+                        />
+                    </div>
+
+                    {isFashionEditorial ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                disabled={processing}
+                                className="inline-flex min-h-11 items-center justify-center border border-neutral-300 px-5 text-[9px] font-medium tracking-[0.14em] text-neutral-800 uppercase transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Back
+                            </button>
+
+                            <button
+                                type="submit"
+                                disabled={
+                                    processing || code.length < OTP_MAX_LENGTH
+                                }
+                                className="inline-flex min-h-11 items-center justify-center border border-neutral-950 bg-neutral-950 px-5 text-[9px] font-medium tracking-[0.14em] text-white uppercase transition hover:bg-transparent hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                {processing ? 'Confirming...' : 'Confirm'}
+                            </button>
+                        </div>
+                    ) : (
                         <div className="flex w-full space-x-5">
                             <Button
                                 type="button"
@@ -212,6 +371,7 @@ function TwoFactorVerificationStep({
                             >
                                 Back
                             </Button>
+
                             <Button
                                 type="submit"
                                 className="flex-1"
@@ -222,8 +382,8 @@ function TwoFactorVerificationStep({
                                 Confirm
                             </Button>
                         </div>
-                    </div>
-                </>
+                    )}
+                </div>
             )}
         </Form>
     );
@@ -252,6 +412,10 @@ export default function TwoFactorSetupModal({
     fetchSetupData,
     errors,
 }: Props) {
+    const { store } = usePage<SharedProps>().props;
+
+    const isFashionEditorial = store?.theme === 'fashion_editorial';
+
     const [showVerificationStep, setShowVerificationStep] =
         useState<boolean>(false);
 
@@ -324,31 +488,86 @@ export default function TwoFactorSetupModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader className="flex items-center justify-center">
-                    <GridScanIcon />
-                    <DialogTitle>{modalConfig.title}</DialogTitle>
-                    <DialogDescription className="text-center">
-                        {modalConfig.description}
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent
+                className={
+                    isFashionEditorial
+                        ? 'border-neutral-300 bg-[#f8f6f1] p-0 text-neutral-950 shadow-2xl sm:max-w-lg sm:rounded-none'
+                        : 'sm:max-w-md'
+                }
+            >
+                {isFashionEditorial ? (
+                    <div className="px-6 py-8 sm:px-10 sm:py-10">
+                        <DialogHeader className="items-center text-center">
+                            <GridScanIcon isFashionEditorial />
 
-                <div className="flex flex-col items-center space-y-5">
-                    {showVerificationStep ? (
-                        <TwoFactorVerificationStep
-                            onClose={handleClose}
-                            onBack={() => setShowVerificationStep(false)}
-                        />
-                    ) : (
-                        <TwoFactorSetupStep
-                            qrCodeSvg={qrCodeSvg}
-                            manualSetupKey={manualSetupKey}
-                            buttonText={modalConfig.buttonText}
-                            onNextStep={handleModalNextStep}
-                            errors={errors}
-                        />
-                    )}
-                </div>
+                            <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                Account security
+                            </p>
+
+                            <DialogTitle className="mt-2 max-w-sm font-serif text-3xl leading-tight font-normal tracking-[-0.025em]">
+                                {modalConfig.title}
+                            </DialogTitle>
+
+                            <DialogDescription className="mt-3 max-w-sm text-center text-sm leading-7 text-neutral-600">
+                                {modalConfig.description}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="mt-8 flex flex-col items-center space-y-6 border-t border-neutral-300 pt-8">
+                            {showVerificationStep ? (
+                                <TwoFactorVerificationStep
+                                    onClose={handleClose}
+                                    onBack={() =>
+                                        setShowVerificationStep(false)
+                                    }
+                                    isFashionEditorial
+                                />
+                            ) : (
+                                <TwoFactorSetupStep
+                                    qrCodeSvg={qrCodeSvg}
+                                    manualSetupKey={manualSetupKey}
+                                    buttonText={modalConfig.buttonText}
+                                    onNextStep={handleModalNextStep}
+                                    errors={errors}
+                                    isFashionEditorial
+                                />
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <DialogHeader className="flex items-center justify-center">
+                            <GridScanIcon isFashionEditorial={false} />
+
+                            <DialogTitle>{modalConfig.title}</DialogTitle>
+
+                            <DialogDescription className="text-center">
+                                {modalConfig.description}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex flex-col items-center space-y-5">
+                            {showVerificationStep ? (
+                                <TwoFactorVerificationStep
+                                    onClose={handleClose}
+                                    onBack={() =>
+                                        setShowVerificationStep(false)
+                                    }
+                                    isFashionEditorial={false}
+                                />
+                            ) : (
+                                <TwoFactorSetupStep
+                                    qrCodeSvg={qrCodeSvg}
+                                    manualSetupKey={manualSetupKey}
+                                    buttonText={modalConfig.buttonText}
+                                    onNextStep={handleModalNextStep}
+                                    errors={errors}
+                                    isFashionEditorial={false}
+                                />
+                            )}
+                        </div>
+                    </>
+                )}
             </DialogContent>
         </Dialog>
     );
