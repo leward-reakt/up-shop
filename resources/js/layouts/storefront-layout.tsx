@@ -1,12 +1,26 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { StorefrontSeo } from '@/components/storefront-seo';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 type StorefrontSharedProps = {
     auth?: {
         user?: {
             name: string;
         } | null;
+    };
+
+    cart?: {
+        guest_has_items?: boolean;
     };
 
     store?: {
@@ -27,9 +41,10 @@ export default function StorefrontLayout({ children }: PropsWithChildren) {
 
     const storeName = props.store?.name || 'Up Shop';
 
-    const accountHref = auth?.user ? '/dashboard' : '/login';
+    const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
-    const accountLabel = auth?.user ? 'Account' : 'Log in';
+    const shouldConfirmGuestCartSync =
+        !auth?.user && Boolean(props.cart?.guest_has_items);
 
     return (
         <div className="min-h-screen bg-neutral-50 text-neutral-950">
@@ -67,12 +82,29 @@ export default function StorefrontLayout({ children }: PropsWithChildren) {
                             Cart
                         </Link>
 
-                        <Link
-                            href={accountHref}
-                            className="hover:text-neutral-600"
-                        >
-                            {accountLabel}
-                        </Link>
+                        {auth?.user ? (
+                            <Link
+                                href="/dashboard"
+                                className="hover:text-neutral-600"
+                            >
+                                Account
+                            </Link>
+                        ) : shouldConfirmGuestCartSync ? (
+                            <button
+                                type="button"
+                                className="hover:text-neutral-600"
+                                onClick={() => setLoginDialogOpen(true)}
+                            >
+                                Log in
+                            </button>
+                        ) : (
+                            <Link
+                                href="/login"
+                                className="hover:text-neutral-600"
+                            >
+                                Log in
+                            </Link>
+                        )}
                     </nav>
 
                     <details className="relative sm:hidden">
@@ -105,16 +137,65 @@ export default function StorefrontLayout({ children }: PropsWithChildren) {
                                 Cart
                             </Link>
 
-                            <Link
-                                href={accountHref}
-                                className="rounded-lg px-3 py-2 hover:bg-neutral-100"
-                            >
-                                {accountLabel}
-                            </Link>
+                            {auth?.user ? (
+                                <Link
+                                    href="/dashboard"
+                                    className="rounded-lg px-3 py-2 hover:bg-neutral-100"
+                                >
+                                    Account
+                                </Link>
+                            ) : shouldConfirmGuestCartSync ? (
+                                <button
+                                    type="button"
+                                    className="rounded-lg px-3 py-2 text-left hover:bg-neutral-100"
+                                    onClick={() => setLoginDialogOpen(true)}
+                                >
+                                    Log in
+                                </button>
+                            ) : (
+                                <Link
+                                    href="/login"
+                                    className="rounded-lg px-3 py-2 hover:bg-neutral-100"
+                                >
+                                    Log in
+                                </Link>
+                            )}
                         </nav>
                     </details>
                 </div>
             </header>
+
+            <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Sync cart to your account?</DialogTitle>
+
+                        <DialogDescription>
+                            Items in your cart will sync to your account,
+                            Continue?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setLoginDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button asChild>
+                            <Link
+                                href="/login?sync_cart=1"
+                                onClick={() => setLoginDialogOpen(false)}
+                            >
+                                Continue
+                            </Link>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <main>{children}</main>
 

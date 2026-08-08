@@ -46,6 +46,12 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
 
+            'cart' => [
+                'guest_has_items' => fn (): bool => $this->guestCartHasItems(
+                    $request,
+                ),
+            ],
+
             'store' => fn (): array => $this->storeData(),
 
             'seo' => [
@@ -62,6 +68,34 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state')
                 || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private function guestCartHasItems(Request $request): bool
+    {
+        if ($request->user() !== null) {
+            return false;
+        }
+
+        $storedItems = $request
+            ->session()
+            ->get('cart.items', []);
+
+        if (! is_array($storedItems)) {
+            return false;
+        }
+
+        foreach ($storedItems as $productId => $quantity) {
+            if (
+                is_numeric($productId)
+                && is_numeric($quantity)
+                && (int) $productId > 0
+                && (int) $quantity > 0
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
