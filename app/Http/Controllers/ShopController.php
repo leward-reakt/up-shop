@@ -32,8 +32,13 @@ class ShopController extends Controller
             ? (string) $filters['sort']
             : 'featured';
 
-        $minPrice = $this->toMinorUnit($filters['min_price'] ?? null);
-        $maxPrice = $this->toMinorUnit($filters['max_price'] ?? null);
+        $minPrice = $this->toMinorUnit(
+            $filters['min_price'] ?? null,
+        );
+
+        $maxPrice = $this->toMinorUnit(
+            $filters['max_price'] ?? null,
+        );
 
         $query = Product::query()
             ->with([
@@ -46,7 +51,9 @@ class ShopController extends Controller
                     ->whereNull('category_id')
                     ->orWhereHas(
                         'category',
-                        fn (Builder $categoryQuery): Builder => $categoryQuery
+                        fn (
+                            Builder $categoryQuery,
+                        ): Builder => $categoryQuery
                             ->where('is_active', true),
                     );
             })
@@ -60,7 +67,9 @@ class ShopController extends Controller
                 fn (Builder $query): Builder => $query
                     ->whereHas(
                         'category',
-                        fn (Builder $categoryQuery): Builder => $categoryQuery
+                        fn (
+                            Builder $categoryQuery,
+                        ): Builder => $categoryQuery
                             ->where('slug', $category)
                             ->where('is_active', true),
                     ),
@@ -83,8 +92,11 @@ class ShopController extends Controller
 
         match ($sort) {
             'newest' => $query->latest(),
+
             'price_asc' => $query->orderBy('price'),
+
             'price_desc' => $query->orderByDesc('price'),
+
             default => $query
                 ->orderByDesc('is_featured')
                 ->latest(),
@@ -95,7 +107,9 @@ class ShopController extends Controller
             ->withQueryString();
 
         $products->through(
-            fn (Product $product): array => $this->productCardData($product),
+            fn (
+                Product $product,
+            ): array => $this->productCardData($product),
         );
 
         $categories = Category::query()
@@ -109,17 +123,24 @@ class ShopController extends Controller
 
         return Inertia::render('shop/index', [
             'products' => $products,
+
             'categories' => $categories,
+
             'filters' => [
                 'search' => $search,
+
                 'category' => $category,
+
                 'min_price' => isset($filters['min_price'])
                     ? (string) $filters['min_price']
                     : '',
+
                 'max_price' => isset($filters['max_price'])
                     ? (string) $filters['max_price']
                     : '',
+
                 'availability' => $availability,
+
                 'sort' => $sort,
             ],
         ]);
@@ -129,6 +150,7 @@ class ShopController extends Controller
     {
         $product->load([
             'category:id,name,slug,is_active',
+
             'images:id,product_id,path,alt_text,sort_order,is_primary',
         ]);
 
@@ -147,13 +169,24 @@ class ShopController extends Controller
         return Inertia::render('shop/show', [
             'product' => [
                 ...$this->productCardData($product),
+
                 'description' => $product->description,
+
+                'meta_title' => $product->meta_title,
+
+                'meta_description' => $product->meta_description,
+
                 'images' => $product->images
-                    ->map(fn ($image): array => [
-                        'id' => $image->id,
-                        'url' => Storage::disk('public')->url($image->path),
-                        'alt_text' => $image->alt_text,
-                    ])
+                    ->map(
+                        fn ($image): array => [
+                            'id' => $image->id,
+
+                            'url' => Storage::disk('public')
+                                ->url($image->path),
+
+                            'alt_text' => $image->alt_text,
+                        ],
+                    )
                     ->values()
                     ->all(),
             ],
@@ -165,27 +198,40 @@ class ShopController extends Controller
      */
     private function productCardData(Product $product): array
     {
-        $primaryImage = $product->images->firstWhere('is_primary', true)
+        $primaryImage = $product->images
+            ->firstWhere('is_primary', true)
             ?? $product->images->first();
 
         return [
             'id' => $product->id,
+
             'name' => $product->name,
+
             'slug' => $product->slug,
+
             'sku' => $product->sku,
+
             'price' => $product->price,
+
             'stock_quantity' => $product->stock_quantity,
+
             'is_featured' => $product->is_featured,
+
             'category' => $product->category === null
                 ? null
                 : [
                     'id' => $product->category->id,
+
                     'name' => $product->category->name,
+
                     'slug' => $product->category->slug,
                 ],
+
             'image_url' => $primaryImage === null
                 ? null
-                : Storage::disk('public')->url($primaryImage->path),
+                : Storage::disk('public')
+                    ->url($primaryImage->path),
+
             'image_alt' => $primaryImage?->alt_text,
         ];
     }
@@ -196,6 +242,8 @@ class ShopController extends Controller
             return null;
         }
 
-        return (int) round(((float) $value) * 100);
+        return (int) round(
+            ((float) $value) * 100,
+        );
     }
 }

@@ -25,6 +25,8 @@ export type CatalogProduct = {
 
 export type CatalogProductDetails = CatalogProduct & {
     description: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
     images: CatalogImage[];
 };
 

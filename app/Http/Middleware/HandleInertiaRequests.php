@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\StoreSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -37,11 +39,53 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+
             'name' => config('app.name'),
+
             'auth' => [
                 'user' => $request->user(),
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+            'store' => fn (): array => $this->storeData(),
+
+            'seo' => [
+                'base_url' => rtrim(
+                    (string) config('app.url'),
+                    '/',
+                ),
+                'indexing_enabled' => (bool) config(
+                    'seo.indexing_enabled',
+                    false,
+                ),
+            ],
+
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state')
+                || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * Storefront information comes from the single store settings record.
+     *
+     * @return array<string, mixed>
+     */
+    private function storeData(): array
+    {
+        $settings = StoreSetting::query()->first();
+
+        $logoPath = $settings?->store_logo_path;
+
+        return [
+            'name' => $settings?->store_name
+                ?: (string) config('app.name', 'Up Shop'),
+
+            'logo_url' => is_string($logoPath) && $logoPath !== ''
+                ? Storage::disk('public')->url($logoPath)
+                : null,
+
+            'email' => $settings?->store_email,
+            'contact_number' => $settings?->contact_number,
+            'business_address' => $settings?->business_address,
         ];
     }
 }
