@@ -30,7 +30,7 @@ class CheckoutRequest extends FormRequest
             'nullable',
         ];
 
-        if ($hasSavedAddresses && $user !== null) {
+        if ($hasSavedAddresses) {
             $shippingAddressIdRules = [
                 'required',
                 'integer',
