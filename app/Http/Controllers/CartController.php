@@ -89,26 +89,29 @@ class CartController extends Controller
                     'quantity' => $newQuantity,
                 ],
             );
+        } else {
+            $items = $this->guestCartItems($request);
 
-            return to_route('cart.index');
+            $currentQuantity = $items[$product->id] ?? 0;
+
+            $newQuantity = $currentQuantity + $requestedQuantity;
+
+            $this->ensureProductCanBePurchased(
+                product: $product,
+                quantity: $newQuantity,
+            );
+
+            $items[$product->id] = $newQuantity;
+
+            $request->session()->put('cart.items', $items);
         }
 
-        $items = $this->guestCartItems($request);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "{$product->name} added to cart.",
+        ]);
 
-        $currentQuantity = $items[$product->id] ?? 0;
-
-        $newQuantity = $currentQuantity + $requestedQuantity;
-
-        $this->ensureProductCanBePurchased(
-            product: $product,
-            quantity: $newQuantity,
-        );
-
-        $items[$product->id] = $newQuantity;
-
-        $request->session()->put('cart.items', $items);
-
-        return to_route('cart.index');
+        return back();
     }
 
     public function update(

@@ -36,7 +36,9 @@ export default function ProductShow({ product }: ProductShowProps) {
     const addToCart = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        form.post('/cart/items');
+        form.post('/cart/items', {
+            preserveScroll: true,
+        });
     };
 
     return (

@@ -13,7 +13,9 @@ export function useFlashToast(): void {
                 return;
             }
 
-            toast[data.type](data.message);
+            toast[data.type](data.message, {
+                duration: 5_000,
+            });
         });
     }, []);
 }

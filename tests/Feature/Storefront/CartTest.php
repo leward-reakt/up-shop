@@ -22,12 +22,20 @@ class CartTest extends TestCase
             'is_active' => true,
         ]);
 
+        $productUrl = "/products/{$product->slug}";
+
         $this
+            ->from($productUrl)
             ->post('/cart/items', [
                 'product_id' => $product->id,
                 'quantity' => 2,
             ])
-            ->assertRedirect('/cart')
+            ->assertRedirect($productUrl)
+            ->assertInertiaFlash('toast.type', 'success')
+            ->assertInertiaFlash(
+                'toast.message',
+                "{$product->name} added to cart.",
+            )
             ->assertSessionHas(
                 "cart.items.{$product->id}",
                 2,
@@ -120,13 +128,21 @@ class CartTest extends TestCase
             'is_active' => true,
         ]);
 
+        $productUrl = "/products/{$product->slug}";
+
         $this
             ->actingAs($user)
+            ->from($productUrl)
             ->post('/cart/items', [
                 'product_id' => $product->id,
                 'quantity' => 2,
             ])
-            ->assertRedirect('/cart');
+            ->assertRedirect($productUrl)
+            ->assertInertiaFlash('toast.type', 'success')
+            ->assertInertiaFlash(
+                'toast.message',
+                "{$product->name} added to cart.",
+            );
 
         $cart = Cart::query()
             ->where('user_id', $user->id)
@@ -166,8 +182,11 @@ class CartTest extends TestCase
             'is_active' => true,
         ]);
 
+        $productUrl = "/products/{$product->slug}";
+
         $this
             ->actingAs($user)
+            ->from($productUrl)
             ->post('/cart/items', [
                 'product_id' => $product->id,
                 'quantity' => 2,
@@ -175,11 +194,12 @@ class CartTest extends TestCase
 
         $this
             ->actingAs($user)
+            ->from($productUrl)
             ->post('/cart/items', [
                 'product_id' => $product->id,
                 'quantity' => 3,
             ])
-            ->assertRedirect('/cart');
+            ->assertRedirect($productUrl);
 
         $cart = Cart::query()
             ->where('user_id', $user->id)
