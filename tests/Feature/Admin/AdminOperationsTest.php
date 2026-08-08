@@ -21,6 +21,26 @@ class AdminOperationsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_can_render_order_edit_form(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'is_active' => true,
+        ]);
+
+        $order = $this->createOrder();
+
+        $this
+            ->actingAs($admin)
+            ->get(
+                route(
+                    'filament.admin.resources.orders.edit',
+                    ['record' => $order],
+                ),
+            )
+            ->assertOk();
+    }
+
     public function test_manual_inventory_adjustment_updates_stock_and_creates_history(): void
     {
         $admin = User::factory()->create([

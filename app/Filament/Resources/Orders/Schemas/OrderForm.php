@@ -4,6 +4,9 @@ namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Actions\Orders\UpdateOrderStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
+use App\Enums\ShippingMethod;
 use App\Models\Order;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -60,8 +63,12 @@ class OrderForm
 
                 TextInput::make('shipping_method')
                     ->formatStateUsing(
-                        fn ($state): string => $state?->label()
-                            ?? (string) $state,
+                        fn (mixed $state): string => match (true) {
+                            $state instanceof ShippingMethod => $state->label(),
+                            is_string($state) => ShippingMethod::tryFrom($state)?->label()
+                                ?? $state,
+                            default => '',
+                        },
                     )
                     ->disabled()
                     ->saved(false),
@@ -118,16 +125,24 @@ class OrderForm
 
                 TextInput::make('payment_method')
                     ->formatStateUsing(
-                        fn ($state): string => $state?->label()
-                            ?? (string) $state,
+                        fn (mixed $state): string => match (true) {
+                            $state instanceof PaymentMethod => $state->label(),
+                            is_string($state) => PaymentMethod::tryFrom($state)?->label()
+                                ?? $state,
+                            default => '',
+                        },
                     )
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('payment_status')
                     ->formatStateUsing(
-                        fn ($state): string => $state?->label()
-                            ?? (string) $state,
+                        fn (mixed $state): string => match (true) {
+                            $state instanceof PaymentStatus => $state->label(),
+                            is_string($state) => PaymentStatus::tryFrom($state)?->label()
+                                ?? $state,
+                            default => '',
+                        },
                     )
                     ->disabled()
                     ->saved(false),
