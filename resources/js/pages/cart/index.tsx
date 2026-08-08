@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { CartItem } from '@/components/cart-item';
 import { Price } from '@/components/price';
@@ -8,18 +9,33 @@ import type { CartLineItem, CartTotals } from '@/types';
 type CartPageProps = {
     items: CartLineItem[];
     totals: CartTotals;
+    bulk_remove_enabled: boolean;
 };
 
-export default function CartPage({ items, totals }: CartPageProps) {
+export default function CartPage({
+    items,
+    totals,
+    bulk_remove_enabled,
+}: CartPageProps) {
+    const [isBulkRemoveMode, setIsBulkRemoveMode] = useState(false);
+
     const discountForm = useForm<{
         discount_code: string;
     }>({
         discount_code: totals.discount_code ?? '',
     });
 
+    const bulkRemoveForm = useForm<{
+        product_ids: number[];
+    }>({
+        product_ids: [],
+    });
+
     const hasAvailabilityIssues = items.some((item) => !item.is_available);
 
     const canCheckout = !hasAvailabilityIssues && !totals.discount_error;
+
+    const selectedCount = bulkRemoveForm.data.product_ids.length;
 
     const applyDiscount = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -35,12 +51,56 @@ export default function CartPage({ items, totals }: CartPageProps) {
         });
     };
 
+    const toggleBulkRemoveMode = () => {
+        if (bulkRemoveForm.processing) {
+            return;
+        }
+
+        bulkRemoveForm.reset();
+        setIsBulkRemoveMode((current) => !current);
+    };
+
+    const setItemSelected = (productId: number, selected: boolean) => {
+        const productIds = bulkRemoveForm.data.product_ids;
+
+        if (selected) {
+            if (productIds.includes(productId)) {
+                return;
+            }
+
+            bulkRemoveForm.setData('product_ids', [...productIds, productId]);
+
+            return;
+        }
+
+        bulkRemoveForm.setData(
+            'product_ids',
+            productIds.filter(
+                (selectedProductId) => selectedProductId !== productId,
+            ),
+        );
+    };
+
+    const removeSelected = () => {
+        if (selectedCount === 0) {
+            return;
+        }
+
+        bulkRemoveForm.delete('/cart/items', {
+            preserveScroll: true,
+            onSuccess: () => {
+                bulkRemoveForm.reset();
+                setIsBulkRemoveMode(false);
+            },
+        });
+    };
+
     return (
         <StorefrontLayout>
             <Head title="Cart" />
 
             <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-                <div className="mb-8 flex items-end justify-between gap-4">
+                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <h1 className="text-3xl font-semibold tracking-tight">
                             Shopping cart
@@ -51,12 +111,28 @@ export default function CartPage({ items, totals }: CartPageProps) {
                         </p>
                     </div>
 
-                    <Link
-                        href="/shop"
-                        className="text-sm font-medium hover:text-neutral-600"
-                    >
-                        Continue shopping
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-4">
+                        {bulk_remove_enabled && items.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={toggleBulkRemoveMode}
+                                disabled={bulkRemoveForm.processing}
+                                aria-pressed={isBulkRemoveMode}
+                                className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                            >
+                                {isBulkRemoveMode
+                                    ? 'Cancel'
+                                    : 'Remove multiple'}
+                            </button>
+                        )}
+
+                        <Link
+                            href="/shop"
+                            className="text-sm font-medium hover:text-neutral-600"
+                        >
+                            Continue shopping
+                        </Link>
+                    </div>
                 </div>
 
                 {items.length === 0 ? (
@@ -79,6 +155,30 @@ export default function CartPage({ items, totals }: CartPageProps) {
                 ) : (
                     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
                         <section className="space-y-4">
+                            {isBulkRemoveMode && (
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-neutral-50 px-4 py-3">
+                                    <p className="text-sm text-neutral-600">
+                                        {selectedCount}{' '}
+                                        {selectedCount === 1 ? 'item' : 'items'}{' '}
+                                        selected
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        onClick={removeSelected}
+                                        disabled={
+                                            selectedCount === 0 ||
+                                            bulkRemoveForm.processing
+                                        }
+                                        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {bulkRemoveForm.processing
+                                            ? 'Removing...'
+                                            : `Remove selected (${selectedCount})`}
+                                    </button>
+                                </div>
+                            )}
+
                             {hasAvailabilityIssues && (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                                     One or more cart items need attention.
@@ -88,7 +188,23 @@ export default function CartPage({ items, totals }: CartPageProps) {
                             )}
 
                             {items.map((item) => (
-                                <CartItem key={item.product_id} item={item} />
+                                <CartItem
+                                    key={item.product_id}
+                                    item={item}
+                                    selectionMode={isBulkRemoveMode}
+                                    selected={bulkRemoveForm.data.product_ids.includes(
+                                        item.product_id,
+                                    )}
+                                    selectionDisabled={
+                                        bulkRemoveForm.processing
+                                    }
+                                    onSelectedChange={(selected) =>
+                                        setItemSelected(
+                                            item.product_id,
+                                            selected,
+                                        )
+                                    }
+                                />
                             ))}
                         </section>
 

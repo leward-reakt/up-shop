@@ -44,6 +44,11 @@ Route::patch(
 )->name('cart.items.update');
 
 Route::delete(
+    '/cart/items',
+    [CartController::class, 'destroyMany'],
+)->name('cart.items.destroy-many');
+
+Route::delete(
     '/cart/items/{productId}',
     [CartController::class, 'destroy'],
 )->name('cart.items.destroy');

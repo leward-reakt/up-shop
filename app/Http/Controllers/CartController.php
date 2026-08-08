@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Cart\CalculateCartTotals;
 use App\Http\Requests\AddCartItemRequest;
 use App\Http\Requests\ApplyCartDiscountRequest;
+use App\Http\Requests\RemoveCartItemsRequest;
 use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\Product;
 use App\Models\User;
@@ -48,6 +49,10 @@ class CartController extends Controller
                 ->values()
                 ->all(),
             'totals' => $totals,
+            'bulk_remove_enabled' => config(
+                'features.cart.bulk_remove',
+                false,
+            ) === true,
         ]);
     }
 
@@ -201,6 +206,52 @@ class CartController extends Controller
         $items = $this->guestCartItems($request);
 
         unset($items[$productId]);
+
+        if ($items === []) {
+            $request->session()->forget([
+                'cart.items',
+                'cart.discount_code',
+            ]);
+
+            return to_route('cart.index');
+        }
+
+        $request->session()->put('cart.items', $items);
+
+        return to_route('cart.index');
+    }
+
+    public function destroyMany(
+        RemoveCartItemsRequest $request,
+    ): RedirectResponse {
+        $productIds = $request->productIds();
+
+        $user = $request->user();
+
+        if ($user instanceof User) {
+            $cart = $user->cart()->first();
+
+            if ($cart !== null) {
+                $cart
+                    ->items()
+                    ->whereIn('product_id', $productIds)
+                    ->delete();
+
+                if (! $cart->items()->exists()) {
+                    $request
+                        ->session()
+                        ->forget('cart.discount_code');
+                }
+            }
+
+            return to_route('cart.index');
+        }
+
+        $items = $this->guestCartItems($request);
+
+        foreach ($productIds as $productId) {
+            unset($items[$productId]);
+        }
 
         if ($items === []) {
             $request->session()->forget([

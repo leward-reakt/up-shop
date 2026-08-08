@@ -57,6 +57,218 @@ class CartTest extends TestCase
             ->assertSessionMissing('cart.items');
     }
 
+    public function test_cart_page_exposes_bulk_remove_feature_flag(): void
+    {
+        config([
+            'features.cart.bulk_remove' => true,
+        ]);
+
+        $product = Product::factory()->create([
+            'stock_quantity' => 10,
+            'is_active' => true,
+        ]);
+
+        $this
+            ->withSession([
+                'cart.items' => [
+                    $product->id => 1,
+                ],
+            ])
+            ->get('/cart')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('cart/index')
+                    ->where(
+                        'bulk_remove_enabled',
+                        true,
+                    ),
+            );
+    }
+
+    public function test_bulk_remove_is_blocked_when_feature_is_disabled(): void
+    {
+        config([
+            'features.cart.bulk_remove' => false,
+        ]);
+
+        $product = Product::factory()->create([
+            'stock_quantity' => 10,
+            'is_active' => true,
+        ]);
+
+        $this
+            ->withSession([
+                'cart.items' => [
+                    $product->id => 1,
+                ],
+            ])
+            ->delete('/cart/items', [
+                'product_ids' => [
+                    $product->id,
+                ],
+            ])
+            ->assertForbidden()
+            ->assertSessionHas(
+                "cart.items.{$product->id}",
+                1,
+            );
+    }
+
+    public function test_guest_can_bulk_remove_selected_cart_items(): void
+    {
+        config([
+            'features.cart.bulk_remove' => true,
+        ]);
+
+        $products = Product::factory()
+            ->count(3)
+            ->create([
+                'stock_quantity' => 10,
+                'is_active' => true,
+            ]);
+
+        $firstProduct = $products[0];
+        $secondProduct = $products[1];
+        $thirdProduct = $products[2];
+
+        $this
+            ->withSession([
+                'cart.items' => [
+                    $firstProduct->id => 1,
+                    $secondProduct->id => 2,
+                    $thirdProduct->id => 3,
+                ],
+            ])
+            ->delete('/cart/items', [
+                'product_ids' => [
+                    $firstProduct->id,
+                    $thirdProduct->id,
+                ],
+            ])
+            ->assertRedirect('/cart')
+            ->assertSessionMissing(
+                "cart.items.{$firstProduct->id}",
+            )
+            ->assertSessionHas(
+                "cart.items.{$secondProduct->id}",
+                2,
+            )
+            ->assertSessionMissing(
+                "cart.items.{$thirdProduct->id}",
+            );
+    }
+
+    public function test_bulk_removing_all_guest_items_clears_discount(): void
+    {
+        config([
+            'features.cart.bulk_remove' => true,
+        ]);
+
+        $products = Product::factory()
+            ->count(2)
+            ->create([
+                'stock_quantity' => 10,
+                'is_active' => true,
+            ]);
+
+        $firstProduct = $products[0];
+        $secondProduct = $products[1];
+
+        $this
+            ->withSession([
+                'cart.items' => [
+                    $firstProduct->id => 1,
+                    $secondProduct->id => 1,
+                ],
+                'cart.discount_code' => 'WELCOME10',
+            ])
+            ->delete('/cart/items', [
+                'product_ids' => [
+                    $firstProduct->id,
+                    $secondProduct->id,
+                ],
+            ])
+            ->assertRedirect('/cart')
+            ->assertSessionMissing('cart.items')
+            ->assertSessionMissing('cart.discount_code');
+    }
+
+    public function test_authenticated_bulk_remove_is_scoped_to_current_customer_cart(): void
+    {
+        config([
+            'features.cart.bulk_remove' => true,
+        ]);
+
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $firstProduct = Product::factory()->create([
+            'stock_quantity' => 10,
+            'is_active' => true,
+        ]);
+
+        $secondProduct = Product::factory()->create([
+            'stock_quantity' => 10,
+            'is_active' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post('/cart/items', [
+                'product_id' => $firstProduct->id,
+                'quantity' => 1,
+            ]);
+
+        $this
+            ->actingAs($user)
+            ->post('/cart/items', [
+                'product_id' => $secondProduct->id,
+                'quantity' => 2,
+            ]);
+
+        $this
+            ->actingAs($otherUser)
+            ->post('/cart/items', [
+                'product_id' => $firstProduct->id,
+                'quantity' => 3,
+            ]);
+
+        $userCart = Cart::query()
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $otherUserCart = Cart::query()
+            ->where('user_id', $otherUser->id)
+            ->firstOrFail();
+
+        $this
+            ->actingAs($user)
+            ->delete('/cart/items', [
+                'product_ids' => [
+                    $firstProduct->id,
+                ],
+            ])
+            ->assertRedirect('/cart');
+
+        $this->assertDatabaseMissing('cart_items', [
+            'cart_id' => $userCart->id,
+            'product_id' => $firstProduct->id,
+        ]);
+
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $userCart->id,
+            'product_id' => $secondProduct->id,
+            'quantity' => 2,
+        ]);
+
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $otherUserCart->id,
+            'product_id' => $firstProduct->id,
+            'quantity' => 3,
+        ]);
+    }
+
     public function test_product_cannot_be_added_beyond_available_stock(): void
     {
         $product = Product::factory()->create([
