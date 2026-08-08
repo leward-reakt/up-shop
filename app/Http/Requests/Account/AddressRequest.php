@@ -30,6 +30,12 @@ class AddressRequest extends FormRequest
                 'max:255',
             ],
 
+            'email' => [
+                'nullable',
+                'email:rfc',
+                'max:255',
+            ],
+
             'phone' => [
                 'required',
                 'string',

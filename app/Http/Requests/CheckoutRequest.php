@@ -41,25 +41,29 @@ class CheckoutRequest extends FormRequest
             ];
         }
 
+        $requiredContactRule = $hasSavedAddresses
+            ? 'nullable'
+            : 'required';
+
         $requiredAddressRule = $hasSavedAddresses
             ? 'nullable'
             : 'required';
 
         return [
             'customer_name' => [
-                'required',
+                $requiredContactRule,
                 'string',
                 'max:255',
             ],
 
             'customer_email' => [
-                'required',
+                $requiredContactRule,
                 'email:rfc',
                 'max:255',
             ],
 
             'customer_phone' => [
-                'required',
+                $requiredContactRule,
                 'string',
                 'max:50',
             ],

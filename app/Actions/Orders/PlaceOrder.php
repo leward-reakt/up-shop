@@ -120,8 +120,6 @@ class PlaceOrder
                     (string) $data['payment_method'],
                 );
 
-                // Recalculate all totals inside the transaction using current
-                // prices, discounts, shipping settings, and tax settings.
                 $totals = $this->calculateCheckoutTotals->handle(
                     items: $items,
                     discountCode: $discountCode,
@@ -142,7 +140,7 @@ class PlaceOrder
                     }
                 }
 
-                $shippingAddress = $this->resolveShippingAddress(
+                $checkoutAddress = $this->resolveCheckoutAddress(
                     user: $user,
                     data: $data,
                 );
@@ -155,16 +153,16 @@ class PlaceOrder
                     'user_id' => $user?->id,
                     'discount_id' => $discountId,
 
-                    'customer_name' => (string) $data['customer_name'],
-                    'customer_email' => (string) $data['customer_email'],
-                    'customer_phone' => (string) $data['customer_phone'],
+                    'customer_name' => $checkoutAddress['recipient_name'],
+                    'customer_email' => $checkoutAddress['email'],
+                    'customer_phone' => $checkoutAddress['phone'],
 
-                    'shipping_address_line_1' => $shippingAddress['address_line_1'],
-                    'shipping_address_line_2' => $shippingAddress['address_line_2'],
-                    'shipping_city' => $shippingAddress['city'],
-                    'shipping_province' => $shippingAddress['province'],
-                    'shipping_postal_code' => $shippingAddress['postal_code'],
-                    'shipping_country' => $shippingAddress['country'],
+                    'shipping_address_line_1' => $checkoutAddress['address_line_1'],
+                    'shipping_address_line_2' => $checkoutAddress['address_line_2'],
+                    'shipping_city' => $checkoutAddress['city'],
+                    'shipping_province' => $checkoutAddress['province'],
+                    'shipping_postal_code' => $checkoutAddress['postal_code'],
+                    'shipping_country' => $checkoutAddress['country'],
 
                     'shipping_method' => $shippingMethod,
 
@@ -199,8 +197,6 @@ class PlaceOrder
                         'subtotal' => $product->price * $quantity,
                     ]);
 
-                    // Keep the conditional guard even after lockForUpdate.
-                    // This preserves checkout safety across SQLite and MySQL.
                     $updatedRows = Product::query()
                         ->whereKey($product->id)
                         ->where(
@@ -240,8 +236,6 @@ class PlaceOrder
                     'notes' => null,
                 ]);
 
-                // Authenticated carts are database-backed and can be cleared
-                // inside the same transaction as the completed order.
                 if ($user !== null) {
                     $cart = $user->cart()->first();
 
@@ -263,10 +257,13 @@ class PlaceOrder
 
     /**
      * Resolve an existing customer address or persist the customer's first
-     * checkout address as their default address.
+     * checkout contact and shipping address as their default address.
      *
      * @param  array<string, mixed>  $data
      * @return array{
+     *     recipient_name: string,
+     *     email: string,
+     *     phone: string,
      *     address_line_1: string,
      *     address_line_2: string|null,
      *     city: string,
@@ -275,7 +272,7 @@ class PlaceOrder
      *     country: string
      * }
      */
-    private function resolveShippingAddress(
+    private function resolveCheckoutAddress(
         ?User $user,
         array $data,
     ): array {
@@ -302,6 +299,9 @@ class PlaceOrder
             }
 
             return [
+                'recipient_name' => $address->recipient_name,
+                'email' => $address->email ?? $user->email,
+                'phone' => $address->phone,
                 'address_line_1' => $address->address_line_1,
                 'address_line_2' => $address->address_line_2,
                 'city' => $address->city,
@@ -311,7 +311,10 @@ class PlaceOrder
             ];
         }
 
-        $shippingAddress = [
+        $checkoutAddress = [
+            'recipient_name' => (string) $data['customer_name'],
+            'email' => (string) $data['customer_email'],
+            'phone' => (string) $data['customer_phone'],
             'address_line_1' => (string) $data['shipping_address_line_1'],
             'address_line_2' => $this->nullableString(
                 $data['shipping_address_line_2'] ?? null,
@@ -327,14 +330,12 @@ class PlaceOrder
                 ->addresses()
                 ->create([
                     'label' => null,
-                    'recipient_name' => (string) $data['customer_name'],
-                    'phone' => (string) $data['customer_phone'],
-                    ...$shippingAddress,
+                    ...$checkoutAddress,
                     'is_default' => true,
                 ]);
         }
 
-        return $shippingAddress;
+        return $checkoutAddress;
     }
 
     private function notifyCustomer(Order $order): void
@@ -349,8 +350,6 @@ class PlaceOrder
                 new OrderPlacedNotification($order),
             );
         } catch (Throwable $exception) {
-            // Email delivery must never roll back or invalidate a successfully
-            // committed customer order.
             report($exception);
         }
     }

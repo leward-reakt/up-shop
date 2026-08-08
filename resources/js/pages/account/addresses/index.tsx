@@ -16,8 +16,10 @@ export default function Addresses({ addresses }: AddressesProps) {
                     <h1 className="text-2xl font-semibold">
                         Shipping Addresses
                     </h1>
+
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Manage the addresses associated with your account.
+                        Manage the delivery addresses associated with your
+                        account.
                     </p>
                 </div>
 
@@ -77,6 +79,29 @@ export default function Addresses({ addresses }: AddressesProps) {
                                         <InputError
                                             className="mt-1"
                                             message={errors.recipient_name}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            htmlFor="email"
+                                            className="mb-1 block text-sm font-medium"
+                                        >
+                                            Email
+                                        </label>
+
+                                        <input
+                                            id="email"
+                                            name="email"
+                                            type="email"
+                                            required
+                                            autoComplete="email"
+                                            className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                                        />
+
+                                        <InputError
+                                            className="mt-1"
+                                            message={errors.email}
                                         />
                                     </div>
 
@@ -275,6 +300,12 @@ export default function Addresses({ addresses }: AddressesProps) {
                                                 <p className="mt-3 text-sm text-muted-foreground">
                                                     {address.recipient_name}
                                                     <br />
+                                                    {address.email && (
+                                                        <>
+                                                            {address.email}
+                                                            <br />
+                                                        </>
+                                                    )}
                                                     {address.phone}
                                                     <br />
                                                     {address.address_line_1}

@@ -46,12 +46,15 @@ class AddressController extends Controller
             $data['is_default'] ?? false
         );
 
+        $email = $data['email'] ?? $user->email;
+
         unset($data['is_default']);
 
         DB::transaction(
             function () use (
                 $user,
                 $data,
+                $email,
                 $requestedDefault,
             ): void {
                 $makeDefault = $requestedDefault
@@ -69,6 +72,7 @@ class AddressController extends Controller
                     ->addresses()
                     ->create([
                         ...$data,
+                        'email' => $email,
                         'country' => 'PH',
                         'is_default' => $makeDefault,
                     ]);
@@ -108,6 +112,10 @@ class AddressController extends Controller
             $data['is_default'] ?? false
         );
 
+        $email = $data['email']
+            ?? $address->email
+            ?? $user->email;
+
         unset($data['is_default']);
 
         DB::transaction(
@@ -115,6 +123,7 @@ class AddressController extends Controller
                 $user,
                 $address,
                 $data,
+                $email,
                 $requestedDefault,
             ): void {
                 $anotherDefaultExists = $user
@@ -138,6 +147,7 @@ class AddressController extends Controller
 
                 $address->update([
                     ...$data,
+                    'email' => $email,
                     'country' => 'PH',
                     'is_default' => $makeDefault,
                 ]);
@@ -201,6 +211,7 @@ class AddressController extends Controller
             'id' => $address->id,
             'label' => $address->label,
             'recipient_name' => $address->recipient_name,
+            'email' => $address->email,
             'phone' => $address->phone,
             'address_line_1' => $address->address_line_1,
             'address_line_2' => $address->address_line_2,

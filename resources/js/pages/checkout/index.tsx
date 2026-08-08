@@ -54,9 +54,9 @@ export default function Checkout({
 
     const { data, setData, post, processing, errors } =
         useForm<CheckoutFormData>({
-            customer_name: customer.name,
-            customer_email: customer.email,
-            customer_phone: customer.phone,
+            customer_name: defaultAddress?.recipient_name ?? customer.name,
+            customer_email: defaultAddress?.email ?? customer.email,
+            customer_phone: defaultAddress?.phone ?? customer.phone,
 
             shipping_address_id: defaultAddress?.id ?? null,
             shipping_address_line_1: defaultAddress?.address_line_1 ?? '',
@@ -109,6 +109,11 @@ export default function Checkout({
     const selectAddress = (address: CheckoutAddress) => {
         setData({
             ...data,
+
+            customer_name: address.recipient_name,
+            customer_email: address.email ?? customer.email,
+            customer_phone: address.phone,
+
             shipping_address_id: address.id,
             shipping_address_line_1: address.address_line_1,
             shipping_address_line_2: address.address_line_2 ?? '',
@@ -156,6 +161,13 @@ export default function Checkout({
                                 Contact information
                             </h2>
 
+                            {hasSavedAddresses && selectedAddress && (
+                                <p className="mt-1 text-sm text-neutral-500">
+                                    Contact information is provided by the
+                                    selected shipping address.
+                                </p>
+                            )}
+
                             <div className="mt-5 grid gap-5 sm:grid-cols-2">
                                 <div className="sm:col-span-2">
                                     <label
@@ -170,13 +182,14 @@ export default function Checkout({
                                         type="text"
                                         autoComplete="name"
                                         value={data.customer_name}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'customer_name',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -198,13 +211,14 @@ export default function Checkout({
                                         type="email"
                                         autoComplete="email"
                                         value={data.customer_email}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'customer_email',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -226,13 +240,14 @@ export default function Checkout({
                                         type="tel"
                                         autoComplete="tel"
                                         value={data.customer_phone}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'customer_phone',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -277,7 +292,8 @@ export default function Checkout({
 
                             {is_authenticated && !hasSavedAddresses && (
                                 <p className="mt-3 rounded-lg bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-                                    This will be saved as your default shipping
+                                    Your contact information and shipping
+                                    address will be saved as your default
                                     address after your order is successfully
                                     placed.
                                 </p>
@@ -699,7 +715,8 @@ export default function Checkout({
 
                         <DialogDescription>
                             Select one of the shipping addresses saved to your
-                            account.
+                            account. Contact information will also use the
+                            selected address.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -737,6 +754,12 @@ export default function Checkout({
                                             <p className="mt-2 text-sm leading-6 text-neutral-600">
                                                 {address.recipient_name}
                                                 <br />
+                                                {address.email && (
+                                                    <>
+                                                        {address.email}
+                                                        <br />
+                                                    </>
+                                                )}
                                                 {address.phone}
                                                 <br />
                                                 {address.address_line_1}

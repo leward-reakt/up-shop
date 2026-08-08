@@ -77,6 +77,7 @@ class CheckoutController extends Controller
                         'id' => $address->id,
                         'label' => $address->label,
                         'recipient_name' => $address->recipient_name,
+                        'email' => $address->email,
                         'phone' => $address->phone,
                         'address_line_1' => $address->address_line_1,
                         'address_line_2' => $address->address_line_2,

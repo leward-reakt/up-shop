@@ -11,6 +11,7 @@ class Address extends Model
         'user_id',
         'label',
         'recipient_name',
+        'email',
         'phone',
         'address_line_1',
         'address_line_2',

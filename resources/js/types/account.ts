@@ -2,6 +2,7 @@ export type AccountAddress = {
     id: number;
     label: string | null;
     recipient_name: string;
+    email: string | null;
     phone: string;
     address_line_1: string;
     address_line_2: string | null;
