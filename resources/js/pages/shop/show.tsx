@@ -1,16 +1,33 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import FashionElegantProduct from '@/components/fashion-elegant-product';
 import { Price } from '@/components/price';
 import { QuantityInput } from '@/components/quantity-input';
 import StorefrontLayout from '@/layouts/storefront-layout';
-import type { CatalogProductDetails } from '@/types';
+import type { CatalogCategory, CatalogProductDetails } from '@/types';
 
 type ProductShowProps = {
+    theme: 'default' | 'fashion_editorial';
+    categories: CatalogCategory[];
     product: CatalogProductDetails;
 };
 
-export default function ProductShow({ product }: ProductShowProps) {
+export default function ProductShow({
+    theme,
+    categories,
+    product,
+}: ProductShowProps) {
+    if (theme === 'fashion_editorial') {
+        return (
+            <FashionElegantProduct product={product} categories={categories} />
+        );
+    }
+
+    return <DefaultProductShow product={product} />;
+}
+
+function DefaultProductShow({ product }: { product: CatalogProductDetails }) {
     const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
 
     const selectedImage =

@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Storefront;
 
+use App\Enums\LandingPageTheme;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -49,6 +51,10 @@ class CatalogTest extends TestCase
             ->assertInertia(
                 fn (Assert $page): Assert => $page
                     ->component('shop/index')
+                    ->where(
+                        'theme',
+                        LandingPageTheme::Default->value,
+                    )
                     ->has('products.data', 1)
                     ->where(
                         'products.data.0.id',
@@ -136,6 +142,10 @@ class CatalogTest extends TestCase
             ->assertInertia(
                 fn (Assert $page): Assert => $page
                     ->component('shop/show')
+                    ->where(
+                        'theme',
+                        LandingPageTheme::Default->value,
+                    )
                     ->where('product.id', $product->id)
                     ->where('product.name', 'Test Product')
                     ->has('product.images', 1),
@@ -170,5 +180,95 @@ class CatalogTest extends TestCase
         $this
             ->get("/products/{$product->slug}")
             ->assertNotFound();
+    }
+
+    public function test_shop_receives_selected_fashion_theme(): void
+    {
+        $this->createStoreSettings(
+            LandingPageTheme::FashionEditorial->value,
+        );
+
+        $this
+            ->get('/shop')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('shop/index')
+                    ->where(
+                        'theme',
+                        LandingPageTheme::FashionEditorial->value,
+                    ),
+            );
+    }
+
+    public function test_product_page_receives_selected_fashion_theme_and_navigation_categories(): void
+    {
+        $category = Category::factory()->create([
+            'name' => 'Accessories',
+            'slug' => 'accessories',
+            'is_active' => true,
+        ]);
+
+        $product = Product::factory()
+            ->for($category)
+            ->create([
+                'slug' => 'fashion-product',
+                'is_active' => true,
+            ]);
+
+        $this->createStoreSettings(
+            LandingPageTheme::FashionEditorial->value,
+        );
+
+        $this
+            ->get("/products/{$product->slug}")
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('shop/show')
+                    ->where(
+                        'theme',
+                        LandingPageTheme::FashionEditorial->value,
+                    )
+                    ->where('product.id', $product->id)
+                    ->has('categories', 1)
+                    ->where(
+                        'categories.0.id',
+                        $category->id,
+                    ),
+            );
+    }
+
+    public function test_invalid_shop_theme_falls_back_to_default(): void
+    {
+        $this->createStoreSettings('invalid-theme');
+
+        $this
+            ->get('/shop')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('shop/index')
+                    ->where(
+                        'theme',
+                        LandingPageTheme::Default->value,
+                    ),
+            );
+    }
+
+    private function createStoreSettings(
+        ?string $theme = null,
+    ): StoreSetting {
+        $attributes = [
+            'store_name' => 'Up Shop',
+            'currency' => 'PHP',
+            'default_shipping_fee' => 0,
+        ];
+
+        if ($theme !== null) {
+            $attributes['landing_page_theme'] = $theme;
+        }
+
+        return StoreSetting::query()->create($attributes);
     }
 }

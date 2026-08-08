@@ -29,13 +29,13 @@ class StoreSettingForm
                     ->maxSize(5120),
 
                 Select::make('landing_page_theme')
-                    ->label('Landing page theme')
+                    ->label('Storefront theme')
                     ->options(LandingPageTheme::options())
                     ->default(LandingPageTheme::Default->value)
                     ->required()
                     ->helperText(
-                        'Controls the design used by the public home page. '
-                        .'Shop, cart, checkout, and account pages are unchanged.',
+                        'Controls the public Home, Shop, and Product Detail '
+                        .'pages. Cart, checkout, and account pages remain unchanged.',
                     ),
 
                 TextInput::make('store_email')

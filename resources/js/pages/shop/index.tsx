@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import FashionElegantShop from '@/components/fashion-elegant-shop';
 import { ProductCard } from '@/components/product-card';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type {
@@ -10,12 +11,37 @@ import type {
 } from '@/types';
 
 type ShopProps = {
+    theme: 'default' | 'fashion_editorial';
     products: Paginated<CatalogProduct>;
     categories: CatalogCategory[];
     filters: CatalogFilters;
 };
 
-export default function Shop({ products, categories, filters }: ShopProps) {
+export default function Shop(props: ShopProps) {
+    if (props.theme === 'fashion_editorial') {
+        return (
+            <FashionElegantShop
+                products={props.products}
+                categories={props.categories}
+                filters={props.filters}
+            />
+        );
+    }
+
+    return (
+        <DefaultShop
+            products={props.products}
+            categories={props.categories}
+            filters={props.filters}
+        />
+    );
+}
+
+function DefaultShop({
+    products,
+    categories,
+    filters,
+}: Omit<ShopProps, 'theme'>) {
     const submitFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -41,6 +67,7 @@ export default function Shop({ products, categories, filters }: ShopProps) {
             <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-semibold">Shop</h1>
+
                     <p className="mt-2 text-neutral-600">
                         Browse and filter available products.
                     </p>

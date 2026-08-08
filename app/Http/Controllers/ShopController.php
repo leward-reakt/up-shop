@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LandingPageTheme;
 use App\Http\Requests\ShopIndexRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -112,19 +115,12 @@ class ShopController extends Controller
             ): array => $this->productCardData($product),
         );
 
-        $categories = Category::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-                'slug',
-            ]);
-
         return Inertia::render('shop/index', [
+            'theme' => $this->storefrontTheme()->value,
+
             'products' => $products,
 
-            'categories' => $categories,
+            'categories' => $this->activeCategories(),
 
             'filters' => [
                 'search' => $search,
@@ -167,6 +163,15 @@ class ShopController extends Controller
         }
 
         return Inertia::render('shop/show', [
+            'theme' => $this->storefrontTheme()->value,
+
+            /*
+             * Fashion Elegant uses category links in its shared storefront
+             * navigation. Keeping this query here avoids making every Inertia
+             * request pay for catalog navigation data.
+             */
+            'categories' => $this->activeCategories(),
+
             'product' => [
                 ...$this->productCardData($product),
 
@@ -191,6 +196,30 @@ class ShopController extends Controller
                     ->all(),
             ],
         ]);
+    }
+
+    /**
+     * @return Collection<int, Category>
+     */
+    private function activeCategories(): Collection
+    {
+        return Category::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'slug',
+            ]);
+    }
+
+    private function storefrontTheme(): LandingPageTheme
+    {
+        $settings = StoreSetting::query()->first();
+
+        return LandingPageTheme::tryFrom(
+            (string) ($settings?->landing_page_theme ?? ''),
+        ) ?? LandingPageTheme::Default;
     }
 
     /**
