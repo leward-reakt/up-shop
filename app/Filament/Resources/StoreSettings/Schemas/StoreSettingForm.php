@@ -36,7 +36,7 @@ class StoreSettingForm
                     ->helperText(
                         'Controls the customer-facing design for supported '
                         .'storefront pages, including home, catalog, cart, '
-                        .'and content pages.',
+                        .'checkout, account, and content pages.',
                     ),
 
                 TextInput::make('store_email')

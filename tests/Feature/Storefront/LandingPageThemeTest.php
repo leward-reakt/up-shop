@@ -124,6 +124,57 @@ class LandingPageThemeTest extends TestCase
             );
     }
 
+    public function test_fashion_theme_is_shared_with_checkout_page(): void
+    {
+        $category = Category::factory()->create([
+            'name' => 'Accessories',
+            'slug' => 'accessories',
+            'is_active' => true,
+        ]);
+
+        $product = Product::factory()
+            ->for($category)
+            ->create([
+                'is_active' => true,
+                'stock_quantity' => 10,
+            ]);
+
+        $this->createStoreSettings(
+            LandingPageTheme::FashionEditorial->value,
+        );
+
+        $this
+            ->withSession([
+                'cart.items' => [
+                    $product->id => 1,
+                ],
+            ])
+            ->get('/checkout')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('checkout/index')
+                    ->where(
+                        'store.theme',
+                        LandingPageTheme::FashionEditorial->value,
+                    )
+                    ->has('store.navigation_categories', 1)
+                    ->where(
+                        'store.navigation_categories.0.id',
+                        $category->id,
+                    )
+                    ->where(
+                        'store.navigation_categories.0.name',
+                        'Accessories',
+                    )
+                    ->where(
+                        'store.navigation_categories.0.slug',
+                        'accessories',
+                    )
+                    ->has('items', 1),
+            );
+    }
+
     public function test_default_theme_does_not_share_fashion_navigation_categories(): void
     {
         $category = Category::factory()->create([
