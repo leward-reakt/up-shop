@@ -6,7 +6,16 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property PaymentMethod $method
+ * @property PaymentStatus $status
+ * @property int $amount
+ * @property string|null $reference
+ * @property Carbon|null $paid_at
+ * @property string|null $notes
+ */
 class Payment extends Model
 {
     protected $fillable = [

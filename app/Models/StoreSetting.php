@@ -8,6 +8,7 @@ class StoreSetting extends Model
 {
     protected $fillable = [
         'store_name',
+        'store_logo_path',
         'store_email',
         'contact_number',
         'business_address',

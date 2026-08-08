@@ -2,10 +2,17 @@
 
 namespace App\Filament\Resources\Products\Tables;
 
+use App\Actions\Inventory\AdjustInventory;
+use App\Models\Product;
+use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -39,6 +46,7 @@ class ProductsTable
                 TextColumn::make('stock_quantity')
                     ->label('Stock')
                     ->numeric()
+                    ->badge()
                     ->sortable(),
 
                 IconColumn::make('is_active')
@@ -69,7 +77,11 @@ class ProductsTable
                 Filter::make('low_stock')
                     ->query(
                         fn (Builder $query): Builder => $query
-                            ->whereColumn('stock_quantity', '<=', 'low_stock_threshold'),
+                            ->whereColumn(
+                                'stock_quantity',
+                                '<=',
+                                'low_stock_threshold',
+                            ),
                     ),
 
                 Filter::make('out_of_stock')
@@ -79,6 +91,46 @@ class ProductsTable
                     ),
             ])
             ->recordActions([
+                Action::make('adjustStock')
+                    ->label('Adjust stock')
+                    ->schema([
+                        TextInput::make('quantity_change')
+                            ->label('Quantity change')
+                            ->helperText('Use a positive number to add stock or a negative number to remove stock.')
+                            ->integer()
+                            ->required()
+                            ->notIn([0]),
+
+                        Textarea::make('notes')
+                            ->label('Reason')
+                            ->rows(3)
+                            ->required()
+                            ->maxLength(1000),
+                    ])
+                    ->action(function (
+                        Product $record,
+                        array $data,
+                    ): void {
+                        $user = auth()->user();
+
+                        abort_unless(
+                            $user instanceof User,
+                            403,
+                        );
+
+                        app(AdjustInventory::class)->handle(
+                            product: $record,
+                            quantityChange: (int) $data['quantity_change'],
+                            user: $user,
+                            notes: (string) $data['notes'],
+                        );
+
+                        Notification::make()
+                            ->title('Inventory updated')
+                            ->success()
+                            ->send();
+                    }),
+
                 EditAction::make(),
                 DeleteAction::make(),
             ])
