@@ -1,5 +1,6 @@
 export type * from './auth';
 export type * from './cart';
 export type * from './catalog';
+export type * from './checkout';
 export type * from './navigation';
 export type * from './ui';

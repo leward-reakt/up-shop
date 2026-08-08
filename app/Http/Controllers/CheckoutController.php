@@ -1,0 +1,405 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Actions\Orders\CalculateCheckoutTotals;
+use App\Actions\Orders\PlaceOrder;
+use App\Enums\PaymentMethod;
+use App\Enums\ShippingMethod;
+use App\Http\Requests\CheckoutRequest;
+use App\Models\Order;
+use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class CheckoutController extends Controller
+{
+    public function index(
+        Request $request,
+        CalculateCheckoutTotals $calculateCheckoutTotals,
+    ): Response|RedirectResponse {
+        $cartQuantities = $this->cartQuantities($request);
+
+        if ($cartQuantities === []) {
+            return to_route('cart.index')
+                ->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+        }
+
+        $items = $this->cartItems($cartQuantities);
+
+        if ($items->count() !== count($cartQuantities)) {
+            return to_route('cart.index')
+                ->withErrors([
+                    'cart' => 'One or more products in your cart are no longer available.',
+                ]);
+        }
+
+        $shippingMethod = ShippingMethod::tryFrom(
+            (string) $request->query(
+                'shipping_method',
+                ShippingMethod::FlatRate->value,
+            ),
+        ) ?? ShippingMethod::FlatRate;
+
+        $discountCode = $this->discountCode($request);
+
+        try {
+            $totals = $calculateCheckoutTotals->handle(
+                items: $items,
+                discountCode: $discountCode,
+                shippingMethod: $shippingMethod,
+            );
+        } catch (ValidationException $exception) {
+            return to_route('cart.index')
+                ->withErrors($exception->errors());
+        }
+
+        $user = $request->user();
+
+        return Inertia::render('checkout/index', [
+            'items' => $items
+                ->map(
+                    function (array $item): array {
+                        $product = $item['product'];
+                        $quantity = $item['quantity'];
+
+                        $primaryImage = $product
+                            ->images
+                            ->firstWhere('is_primary', true)
+                            ?? $product->images->first();
+
+                        return [
+                            'product_id' => $product->id,
+                            'name' => $product->name,
+                            'slug' => $product->slug,
+                            'quantity' => $quantity,
+                            'unit_price' => $product->price,
+                            'line_total' => (
+                                $product->price
+                                * $quantity
+                            ),
+                            'image_url' => $primaryImage === null
+                                ? null
+                                : Storage::disk('public')
+                                    ->url($primaryImage->path),
+                        ];
+                    },
+                )
+                ->values()
+                ->all(),
+
+            'totals' => $totals,
+
+            'shipping_options' => array_map(
+                fn (ShippingMethod $method): array => [
+                    'value' => $method->value,
+                    'label' => $method->label(),
+                ],
+                ShippingMethod::cases(),
+            ),
+
+            'payment_options' => [
+                [
+                    'value' => PaymentMethod::CashOnDelivery->value,
+                    'label' => 'Cash on Delivery',
+                ],
+                [
+                    'value' => PaymentMethod::BankTransfer->value,
+                    'label' => 'Bank Transfer',
+                ],
+            ],
+
+            'selected_shipping_method' => $shippingMethod->value,
+
+            'customer' => [
+                'name' => $user->name ?? '',
+                'email' => $user->email ?? '',
+                'phone' => $user->phone ?? '',
+            ],
+        ]);
+    }
+
+    public function store(
+        CheckoutRequest $request,
+        PlaceOrder $placeOrder,
+    ): RedirectResponse {
+        $cartQuantities = $this->cartQuantities($request);
+
+        if ($cartQuantities === []) {
+            throw ValidationException::withMessages([
+                'cart' => 'Your cart is empty.',
+            ]);
+        }
+
+        $order = $placeOrder->handle(
+            user: $request->user(),
+            cartQuantities: $cartQuantities,
+            data: $request->validated(),
+            discountCode: $this->discountCode($request),
+        );
+
+        // Guest carts live in the session, so they are cleared only after
+        // the database transaction completed successfully.
+        if ($request->user() === null) {
+            $request->session()->forget('cart.items');
+        }
+
+        $request->session()->forget('cart.discount_code');
+
+        $request->session()->put(
+            'checkout.order_id',
+            $order->id,
+        );
+
+        return to_route('checkout.success');
+    }
+
+    public function success(Request $request): Response
+    {
+        $orderId = $request->session()->get(
+            'checkout.order_id',
+        );
+
+        abort_unless(
+            is_numeric($orderId),
+            404,
+        );
+
+        $order = Order::query()
+            ->with([
+                'items',
+                'payment',
+            ])
+            ->findOrFail((int) $orderId);
+
+        // Registered orders remain private to their owner.
+        if (
+            $order->user_id !== null
+            && $order->user_id !== $request->user()?->id
+        ) {
+            abort(403);
+        }
+
+        return Inertia::render('checkout/success', [
+            'order' => [
+                'order_number' => $order->order_number,
+
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+
+                'shipping_address' => [
+                    'address_line_1' => $order->shipping_address_line_1,
+                    'address_line_2' => $order->shipping_address_line_2,
+                    'city' => $order->shipping_city,
+                    'province' => $order->shipping_province,
+                    'postal_code' => $order->shipping_postal_code,
+                    'country' => $order->shipping_country,
+                ],
+
+                'shipping_method' => $order->shipping_method->value,
+                'shipping_method_label' => $order->shipping_method->label(),
+
+                'payment_method' => $order->payment_method->value,
+                'payment_method_label' => $this->paymentMethodLabel(
+                    $order->payment_method,
+                ),
+
+                'payment_status' => $order->payment_status->value,
+                'payment_status_label' => $this->statusLabel(
+                    $order->payment_status->value,
+                ),
+
+                'order_status' => $order->order_status->value,
+                'order_status_label' => $this->statusLabel(
+                    $order->order_status->value,
+                ),
+
+                'payment_reference' => $order->payment?->reference,
+
+                'items' => $order->items
+                    ->map(
+                        fn ($item): array => [
+                            'product_name' => $item->product_name,
+                            'sku' => $item->sku,
+                            'quantity' => $item->quantity,
+                            'unit_price' => $item->unit_price,
+                            'subtotal' => $item->subtotal,
+                        ],
+                    )
+                    ->values()
+                    ->all(),
+
+                'subtotal' => $order->subtotal,
+                'discount_total' => $order->discount_total,
+                'discount_code' => $order->discount_code,
+                'shipping_total' => $order->shipping_total,
+                'tax_total' => $order->tax_total,
+                'grand_total' => $order->grand_total,
+
+                'created_at' => $order->created_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function cartQuantities(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user !== null) {
+            $cart = $user
+                ->cart()
+                ->with('items')
+                ->first();
+
+            if ($cart === null) {
+                return [];
+            }
+
+            $quantities = [];
+
+            foreach ($cart->items as $cartItem) {
+                $quantity = (int) $cartItem->quantity;
+
+                if ($quantity > 0) {
+                    $quantities[(int) $cartItem->product_id] = $quantity;
+                }
+            }
+
+            return $quantities;
+        }
+
+        $rawItems = $request->session()->get(
+            'cart.items',
+            [],
+        );
+
+        if (! is_array($rawItems)) {
+            return [];
+        }
+
+        $quantities = [];
+
+        foreach ($rawItems as $productId => $quantity) {
+            if (! is_numeric($productId)) {
+                continue;
+            }
+
+            if (! is_numeric($quantity)) {
+                continue;
+            }
+
+            $quantity = (int) $quantity;
+
+            if ($quantity < 1) {
+                continue;
+            }
+
+            $quantities[(int) $productId] = $quantity;
+        }
+
+        return $quantities;
+    }
+
+    /**
+     * @param  array<int, int>  $cartQuantities
+     * @return Collection<int, array{
+     *     product: Product,
+     *     quantity: int
+     * }>
+     */
+    private function cartItems(
+        array $cartQuantities,
+    ): Collection {
+        $products = Product::query()
+            ->with([
+                'category:id,is_active',
+                'images:id,product_id,path,alt_text,sort_order,is_primary',
+            ])
+            ->whereIn(
+                'id',
+                array_keys($cartQuantities),
+            )
+            ->where('is_active', true)
+            ->where(
+                function (Builder $query): void {
+                    $query
+                        ->whereNull('category_id')
+                        ->orWhereHas(
+                            'category',
+                            fn (Builder $categoryQuery): Builder => $categoryQuery
+                                ->where('is_active', true),
+                        );
+                },
+            )
+            ->get()
+            ->keyBy('id');
+
+        /**
+         * @var Collection<int, array{
+         *     product: Product,
+         *     quantity: int
+         * }> $items
+         */
+        $items = collect();
+
+        foreach ($cartQuantities as $productId => $quantity) {
+            $product = $products->get($productId);
+
+            if (! $product instanceof Product) {
+                continue;
+            }
+
+            $items->push([
+                'product' => $product,
+                'quantity' => $quantity,
+            ]);
+        }
+
+        return $items;
+    }
+
+    private function discountCode(
+        Request $request,
+    ): ?string {
+        $discountCode = $request->session()->get(
+            'cart.discount_code',
+        );
+
+        if (! is_string($discountCode)) {
+            return null;
+        }
+
+        $discountCode = trim($discountCode);
+
+        return $discountCode === ''
+            ? null
+            : $discountCode;
+    }
+
+    private function paymentMethodLabel(
+        PaymentMethod $method,
+    ): string {
+        return match ($method) {
+            PaymentMethod::CashOnDelivery => 'Cash on Delivery',
+            PaymentMethod::BankTransfer => 'Bank Transfer',
+        };
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return ucwords(
+            str_replace('_', ' ', $status),
+        );
+    }
+}

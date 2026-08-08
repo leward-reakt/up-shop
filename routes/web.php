@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,15 @@ Route::post('/cart/discount', [CartController::class, 'applyDiscount'])
 
 Route::delete('/cart/discount', [CartController::class, 'removeDiscount'])
     ->name('cart.discount.destroy');
+
+Route::get('/checkout', [CheckoutController::class, 'index'])
+    ->name('checkout.index');
+
+Route::post('/checkout', [CheckoutController::class, 'store'])
+    ->name('checkout.store');
+
+Route::get('/checkout/success', [CheckoutController::class, 'success'])
+    ->name('checkout.success');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')

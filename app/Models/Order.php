@@ -5,11 +5,18 @@ namespace App\Models;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\ShippingMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property ShippingMethod $shipping_method
+ * @property PaymentMethod $payment_method
+ * @property PaymentStatus $payment_status
+ * @property OrderStatus $order_status
+ */
 class Order extends Model
 {
     protected $fillable = [
@@ -82,6 +89,7 @@ class Order extends Model
             'shipping_total' => 'integer',
             'tax_total' => 'integer',
             'grand_total' => 'integer',
+            'shipping_method' => ShippingMethod::class,
             'payment_method' => PaymentMethod::class,
             'payment_status' => PaymentStatus::class,
             'order_status' => OrderStatus::class,
