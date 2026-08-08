@@ -2,7 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\LandingPageTheme;
+use App\Models\Category;
 use App\Models\StoreSetting;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
@@ -109,6 +112,10 @@ class HandleInertiaRequests extends Middleware
 
         $logoPath = $settings?->store_logo_path;
 
+        $theme = LandingPageTheme::tryFrom(
+            (string) ($settings->landing_page_theme ?? ''),
+        ) ?? LandingPageTheme::Default;
+
         return [
             'name' => $settings?->store_name
                 ?: (string) config('app.name', 'Up Shop'),
@@ -120,6 +127,50 @@ class HandleInertiaRequests extends Middleware
             'email' => $settings?->store_email,
             'contact_number' => $settings?->contact_number,
             'business_address' => $settings?->business_address,
+
+            'theme' => $theme->value,
+
+            'navigation_categories' => $this->navigationCategories(
+                $theme,
+            ),
         ];
+    }
+
+    /**
+     * Keep Fashion Elegant navigation consistent across themed storefront
+     * pages without introducing category-specific theme configuration.
+     *
+     * @return array<int, array{id: int, name: string, slug: string}>
+     */
+    private function navigationCategories(
+        LandingPageTheme $theme,
+    ): array {
+        if ($theme !== LandingPageTheme::FashionEditorial) {
+            return [];
+        }
+
+        return Category::query()
+            ->where('is_active', true)
+            ->whereHas(
+                'products',
+                fn (Builder $query): Builder => $query
+                    ->where('is_active', true),
+            )
+            ->orderBy('name')
+            ->limit(5)
+            ->get([
+                'id',
+                'name',
+                'slug',
+            ])
+            ->map(
+                fn (Category $category): array => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                ],
+            )
+            ->values()
+            ->all();
     }
 }

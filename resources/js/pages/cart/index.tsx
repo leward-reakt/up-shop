@@ -1,11 +1,10 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import { CartItem } from '@/components/cart-item';
+import { CartOrderSummary } from '@/components/cart-order-summary';
 import { CartRemoveConfirmationDialog } from '@/components/cart-remove-confirmation-dialog';
-import { Price } from '@/components/price';
 import StorefrontLayout from '@/layouts/storefront-layout';
-import type { CartLineItem, CartTotals } from '@/types';
+import type { CartLineItem, CartTotals, CatalogCategory } from '@/types';
 
 type CartPageProps = {
     items: CartLineItem[];
@@ -13,20 +12,30 @@ type CartPageProps = {
     bulk_remove_enabled: boolean;
 };
 
+type CartSharedProps = {
+    store?: {
+        theme?: 'default' | 'fashion_editorial';
+        navigation_categories?: CatalogCategory[];
+    };
+};
+
 export default function CartPage({
     items,
     totals,
     bulk_remove_enabled,
 }: CartPageProps) {
+    const page = usePage();
+
+    const sharedProps = page.props as unknown as CartSharedProps;
+
+    const isFashionEditorial = sharedProps.store?.theme === 'fashion_editorial';
+
+    const navigationCategories = sharedProps.store?.navigation_categories ?? [];
+
     const [isBulkRemoveMode, setIsBulkRemoveMode] = useState(false);
+
     const [bulkRemoveConfirmationOpen, setBulkRemoveConfirmationOpen] =
         useState(false);
-
-    const discountForm = useForm<{
-        discount_code: string;
-    }>({
-        discount_code: totals.discount_code ?? '',
-    });
 
     const bulkRemoveForm = useForm<{
         product_ids: number[];
@@ -39,20 +48,6 @@ export default function CartPage({
     const canCheckout = !hasAvailabilityIssues && !totals.discount_error;
 
     const selectedCount = bulkRemoveForm.data.product_ids.length;
-
-    const applyDiscount = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        discountForm.post('/cart/discount', {
-            preserveScroll: true,
-        });
-    };
-
-    const removeDiscount = () => {
-        router.delete('/cart/discount', {
-            preserveScroll: true,
-        });
-    };
 
     const toggleBulkRemoveMode = () => {
         if (bulkRemoveForm.processing) {
@@ -107,6 +102,166 @@ export default function CartPage({
             },
         });
     };
+
+    if (isFashionEditorial) {
+        return (
+            <StorefrontLayout
+                variant="fashion-editorial"
+                navigationCategories={navigationCategories}
+            >
+                <Head title="Cart" />
+
+                <section className="bg-[#f8f6f1]">
+                    <div className="mx-auto max-w-[1600px] px-5 py-14 sm:px-8 sm:py-20 lg:px-14 lg:py-24">
+                        <header className="border-b border-neutral-300 pb-10">
+                            <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                                        Shopping bag
+                                    </p>
+
+                                    <h1 className="mt-4 font-serif text-5xl leading-none tracking-[-0.035em] sm:text-6xl">
+                                        Your cart.
+                                    </h1>
+
+                                    <p className="mt-5 max-w-xl text-sm leading-7 text-neutral-600">
+                                        Review the pieces in your selection
+                                        before continuing to checkout.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-6">
+                                    {bulk_remove_enabled &&
+                                        items.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={toggleBulkRemoveMode}
+                                                disabled={
+                                                    bulkRemoveForm.processing
+                                                }
+                                                aria-pressed={isBulkRemoveMode}
+                                                className="inline-flex min-h-10 items-center border-b border-red-300 text-[9px] font-medium tracking-[0.14em] text-red-700 uppercase transition-opacity hover:opacity-60 disabled:opacity-40"
+                                            >
+                                                {isBulkRemoveMode
+                                                    ? 'Cancel'
+                                                    : 'Remove multiple'}
+                                            </button>
+                                        )}
+
+                                    <Link
+                                        href="/shop"
+                                        className="inline-flex min-h-10 items-center border-b border-neutral-950 text-[9px] font-medium tracking-[0.14em] uppercase transition-opacity hover:opacity-60"
+                                    >
+                                        Continue shopping
+                                    </Link>
+                                </div>
+                            </div>
+                        </header>
+
+                        {items.length === 0 ? (
+                            <div className="py-24 text-center sm:py-32">
+                                <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                                    Your selection
+                                </p>
+
+                                <h2 className="mt-5 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
+                                    Your cart is empty.
+                                </h2>
+
+                                <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-neutral-600">
+                                    Discover the collection and add pieces to
+                                    begin your order.
+                                </p>
+
+                                <Link
+                                    href="/shop"
+                                    className="mt-9 inline-flex min-h-12 items-center justify-center border border-neutral-950 px-7 text-[10px] font-medium tracking-[0.16em] uppercase transition duration-300 hover:bg-neutral-950 hover:text-white"
+                                >
+                                    Shop the collection
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-20">
+                                <section className="border-t border-neutral-300">
+                                    {isBulkRemoveMode && (
+                                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-300 bg-[#eee8e1] px-4 py-4 sm:px-5">
+                                            <p className="text-[10px] font-medium tracking-[0.12em] text-neutral-600 uppercase">
+                                                {selectedCount}{' '}
+                                                {selectedCount === 1
+                                                    ? 'item'
+                                                    : 'items'}{' '}
+                                                selected
+                                            </p>
+
+                                            <button
+                                                type="button"
+                                                onClick={requestRemoveSelected}
+                                                disabled={
+                                                    selectedCount === 0 ||
+                                                    bulkRemoveForm.processing
+                                                }
+                                                className="min-h-10 border border-red-700 px-4 text-[9px] font-medium tracking-[0.14em] text-red-700 uppercase transition hover:bg-red-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                            >
+                                                {bulkRemoveForm.processing
+                                                    ? 'Removing...'
+                                                    : `Remove selected (${selectedCount})`}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {hasAvailabilityIssues && (
+                                        <div className="border-b border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
+                                            One or more cart items need
+                                            attention. Update or remove
+                                            unavailable quantities before
+                                            checkout.
+                                        </div>
+                                    )}
+
+                                    {items.map((item) => (
+                                        <CartItem
+                                            key={item.product_id}
+                                            item={item}
+                                            variant="fashion-editorial"
+                                            selectionMode={isBulkRemoveMode}
+                                            selected={bulkRemoveForm.data.product_ids.includes(
+                                                item.product_id,
+                                            )}
+                                            selectionDisabled={
+                                                bulkRemoveForm.processing
+                                            }
+                                            onSelectedChange={(selected) =>
+                                                setItemSelected(
+                                                    item.product_id,
+                                                    selected,
+                                                )
+                                            }
+                                        />
+                                    ))}
+                                </section>
+
+                                <aside className="lg:border-l lg:border-neutral-300 lg:pl-10 xl:pl-12">
+                                    <CartOrderSummary
+                                        totals={totals}
+                                        canCheckout={canCheckout}
+                                        variant="fashion-editorial"
+                                    />
+                                </aside>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                <CartRemoveConfirmationDialog
+                    open={bulkRemoveConfirmationOpen}
+                    itemCount={selectedCount}
+                    processing={bulkRemoveForm.processing}
+                    onOpenChange={setBulkRemoveConfirmationOpen}
+                    onConfirm={confirmRemoveSelected}
+                />
+            </StorefrontLayout>
+        );
+    }
 
     return (
         <StorefrontLayout>
@@ -222,152 +377,10 @@ export default function CartPage({
                         </section>
 
                         <aside>
-                            <div className="sticky top-6 rounded-xl border bg-white p-6">
-                                <h2 className="text-lg font-semibold">
-                                    Order summary
-                                </h2>
-
-                                <dl className="mt-6 space-y-4 text-sm">
-                                    <div className="flex justify-between gap-4">
-                                        <dt className="text-neutral-600">
-                                            Subtotal
-                                        </dt>
-
-                                        <dd>
-                                            <Price amount={totals.subtotal} />
-                                        </dd>
-                                    </div>
-
-                                    <div className="flex justify-between gap-4">
-                                        <dt className="text-neutral-600">
-                                            Shipping estimate
-                                        </dt>
-
-                                        <dd>
-                                            <Price
-                                                amount={totals.shipping_total}
-                                            />
-                                        </dd>
-                                    </div>
-
-                                    <div className="flex justify-between gap-4">
-                                        <dt className="text-neutral-600">
-                                            Discount
-                                        </dt>
-
-                                        <dd>
-                                            {totals.discount_total > 0
-                                                ? '−'
-                                                : ''}
-
-                                            <Price
-                                                amount={totals.discount_total}
-                                            />
-                                        </dd>
-                                    </div>
-
-                                    <div className="flex justify-between gap-4 border-t pt-4 text-base font-semibold">
-                                        <dt>Grand total</dt>
-
-                                        <dd>
-                                            <Price
-                                                amount={totals.grand_total}
-                                            />
-                                        </dd>
-                                    </div>
-                                </dl>
-
-                                <div className="mt-8 border-t pt-6">
-                                    <h3 className="text-sm font-semibold">
-                                        Discount code
-                                    </h3>
-
-                                    <form
-                                        onSubmit={applyDiscount}
-                                        className="mt-3 flex gap-2"
-                                    >
-                                        <input
-                                            type="text"
-                                            value={
-                                                discountForm.data.discount_code
-                                            }
-                                            onChange={(event) =>
-                                                discountForm.setData(
-                                                    'discount_code',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="WELCOME10"
-                                            disabled={discountForm.processing}
-                                            className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm outline-none focus:border-neutral-500"
-                                        />
-
-                                        <button
-                                            type="submit"
-                                            disabled={discountForm.processing}
-                                            className="rounded-lg bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-                                        >
-                                            Apply
-                                        </button>
-                                    </form>
-
-                                    {discountForm.errors.discount_code && (
-                                        <p className="mt-2 text-sm text-red-600">
-                                            {discountForm.errors.discount_code}
-                                        </p>
-                                    )}
-
-                                    {totals.discount_error && (
-                                        <p className="mt-2 text-sm text-amber-700">
-                                            {totals.discount_error}
-                                        </p>
-                                    )}
-
-                                    {totals.discount_code &&
-                                        !totals.discount_error && (
-                                            <div className="mt-3 flex items-center justify-between gap-3 text-sm">
-                                                <span className="text-emerald-700">
-                                                    {totals.discount_code}{' '}
-                                                    applied
-                                                </span>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={removeDiscount}
-                                                    className="font-medium text-neutral-600 hover:text-neutral-950"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        )}
-                                </div>
-
-                                <div className="mt-6 border-t pt-6">
-                                    {canCheckout ? (
-                                        <Link
-                                            href="/checkout"
-                                            className="flex w-full items-center justify-center rounded-lg bg-neutral-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
-                                        >
-                                            Proceed to checkout
-                                        </Link>
-                                    ) : (
-                                        <>
-                                            <button
-                                                type="button"
-                                                disabled
-                                                className="w-full cursor-not-allowed rounded-lg bg-neutral-300 px-5 py-3 text-sm font-medium text-neutral-600"
-                                            >
-                                                Proceed to checkout
-                                            </button>
-
-                                            <p className="mt-3 text-center text-xs leading-5 text-neutral-500">
-                                                Resolve the cart issues above
-                                                before continuing.
-                                            </p>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                            <CartOrderSummary
+                                totals={totals}
+                                canCheckout={canCheckout}
+                            />
                         </aside>
                     </div>
                 )}

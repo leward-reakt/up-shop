@@ -34,8 +34,8 @@ class StoreSettingForm
                     ->default(LandingPageTheme::Default->value)
                     ->required()
                     ->helperText(
-                        'Controls the public Home, Shop, and Product Detail '
-                        .'pages. Cart, checkout, and account pages remain unchanged.',
+                        'Controls the customer-facing design for supported '
+                        .'storefront pages, including the home page and cart.',
                     ),
 
                 TextInput::make('store_email')

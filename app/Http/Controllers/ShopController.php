@@ -218,7 +218,7 @@ class ShopController extends Controller
         $settings = StoreSetting::query()->first();
 
         return LandingPageTheme::tryFrom(
-            (string) ($settings?->landing_page_theme ?? ''),
+            (string) ($settings->landing_page_theme ?? ''),
         ) ?? LandingPageTheme::Default;
     }
 
