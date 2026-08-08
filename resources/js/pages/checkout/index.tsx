@@ -1,9 +1,20 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Price } from '@/components/price';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type {
+    CheckoutAddress,
     CheckoutCustomer,
     CheckoutFormData,
     CheckoutItem,
@@ -18,6 +29,8 @@ type CheckoutProps = {
     payment_options: CheckoutOption[];
     selected_shipping_method: string;
     customer: CheckoutCustomer;
+    is_authenticated: boolean;
+    saved_addresses: CheckoutAddress[];
 };
 
 export default function Checkout({
@@ -27,24 +40,41 @@ export default function Checkout({
     payment_options,
     selected_shipping_method,
     customer,
+    is_authenticated,
+    saved_addresses,
 }: CheckoutProps) {
+    const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+
+    const defaultAddress =
+        saved_addresses.find((address) => address.is_default) ??
+        saved_addresses[0] ??
+        null;
+
+    const hasSavedAddresses = saved_addresses.length > 0;
+
     const { data, setData, post, processing, errors } =
         useForm<CheckoutFormData>({
             customer_name: customer.name,
             customer_email: customer.email,
             customer_phone: customer.phone,
 
-            shipping_address_line_1: '',
-            shipping_address_line_2: '',
-            shipping_city: '',
-            shipping_province: '',
-            shipping_postal_code: '',
+            shipping_address_id: defaultAddress?.id ?? null,
+            shipping_address_line_1: defaultAddress?.address_line_1 ?? '',
+            shipping_address_line_2: defaultAddress?.address_line_2 ?? '',
+            shipping_city: defaultAddress?.city ?? '',
+            shipping_province: defaultAddress?.province ?? '',
+            shipping_postal_code: defaultAddress?.postal_code ?? '',
 
             shipping_method: selected_shipping_method,
             payment_method: 'cash_on_delivery',
 
             customer_notes: '',
         });
+
+    const selectedAddress =
+        saved_addresses.find(
+            (address) => address.id === data.shipping_address_id,
+        ) ?? null;
 
     const cartErrorValue = Object.entries(errors).find(
         ([field]) => field === 'cart',
@@ -74,6 +104,20 @@ export default function Checkout({
                 only: ['totals', 'selected_shipping_method'],
             },
         );
+    };
+
+    const selectAddress = (address: CheckoutAddress) => {
+        setData({
+            ...data,
+            shipping_address_id: address.id,
+            shipping_address_line_1: address.address_line_1,
+            shipping_address_line_2: address.address_line_2 ?? '',
+            shipping_city: address.city,
+            shipping_province: address.province,
+            shipping_postal_code: address.postal_code,
+        });
+
+        setAddressDialogOpen(false);
     };
 
     return (
@@ -200,9 +244,49 @@ export default function Checkout({
                         </section>
 
                         <section className="rounded-xl border bg-white p-6">
-                            <h2 className="text-lg font-semibold">
-                                Shipping address
-                            </h2>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold">
+                                        Shipping address
+                                    </h2>
+
+                                    {hasSavedAddresses && selectedAddress && (
+                                        <p className="mt-1 text-sm text-neutral-500">
+                                            Using{' '}
+                                            {selectedAddress.label ??
+                                                selectedAddress.recipient_name}
+                                            {selectedAddress.is_default
+                                                ? ' — Default'
+                                                : ''}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {hasSavedAddresses && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setAddressDialogOpen(true)
+                                        }
+                                        className="self-start rounded-lg border px-4 py-2 text-sm font-medium hover:bg-neutral-50 sm:self-auto"
+                                    >
+                                        Use different address
+                                    </button>
+                                )}
+                            </div>
+
+                            {is_authenticated && !hasSavedAddresses && (
+                                <p className="mt-3 rounded-lg bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+                                    This will be saved as your default shipping
+                                    address after your order is successfully
+                                    placed.
+                                </p>
+                            )}
+
+                            <InputError
+                                message={errors.shipping_address_id}
+                                className="mt-3"
+                            />
 
                             <div className="mt-5 grid gap-5 sm:grid-cols-2">
                                 <div className="sm:col-span-2">
@@ -218,13 +302,14 @@ export default function Checkout({
                                         type="text"
                                         autoComplete="address-line1"
                                         value={data.shipping_address_line_1}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'shipping_address_line_1',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -249,13 +334,14 @@ export default function Checkout({
                                         type="text"
                                         autoComplete="address-line2"
                                         value={data.shipping_address_line_2}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'shipping_address_line_2',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -277,13 +363,14 @@ export default function Checkout({
                                         type="text"
                                         autoComplete="address-level2"
                                         value={data.shipping_city}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'shipping_city',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -305,13 +392,14 @@ export default function Checkout({
                                         type="text"
                                         autoComplete="address-level1"
                                         value={data.shipping_province}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'shipping_province',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -333,13 +421,14 @@ export default function Checkout({
                                         type="text"
                                         autoComplete="postal-code"
                                         value={data.shipping_postal_code}
+                                        disabled={hasSavedAddresses}
                                         onChange={(event) =>
                                             setData(
                                                 'shipping_postal_code',
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-lg border px-3 py-2"
+                                        className="w-full rounded-lg border px-3 py-2 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                                     />
 
                                     <InputError
@@ -599,6 +688,101 @@ export default function Checkout({
                     </aside>
                 </form>
             </div>
+
+            <Dialog
+                open={addressDialogOpen}
+                onOpenChange={setAddressDialogOpen}
+            >
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Choose shipping address</DialogTitle>
+
+                        <DialogDescription>
+                            Select one of the shipping addresses saved to your
+                            account.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="max-h-[60vh] space-y-3 overflow-y-auto py-2">
+                        {saved_addresses.map((address) => {
+                            const isSelected =
+                                address.id === data.shipping_address_id;
+
+                            return (
+                                <button
+                                    key={address.id}
+                                    type="button"
+                                    onClick={() => selectAddress(address)}
+                                    className={`w-full rounded-lg border p-4 text-left transition ${
+                                        isSelected
+                                            ? 'border-neutral-950 ring-1 ring-neutral-950'
+                                            : 'hover:bg-neutral-50'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="font-medium">
+                                                    {address.label ??
+                                                        address.recipient_name}
+                                                </p>
+
+                                                {address.is_default && (
+                                                    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium">
+                                                        Default
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <p className="mt-2 text-sm leading-6 text-neutral-600">
+                                                {address.recipient_name}
+                                                <br />
+                                                {address.phone}
+                                                <br />
+                                                {address.address_line_1}
+                                                <br />
+                                                {address.address_line_2 && (
+                                                    <>
+                                                        {address.address_line_2}
+                                                        <br />
+                                                    </>
+                                                )}
+                                                {address.city},{' '}
+                                                {address.province}{' '}
+                                                {address.postal_code}
+                                            </p>
+                                        </div>
+
+                                        {isSelected && (
+                                            <span className="text-sm font-medium">
+                                                Selected
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <DialogFooter className="sm:justify-between">
+                        <DialogClose asChild>
+                            <button
+                                type="button"
+                                className="rounded-lg border px-4 py-2 text-sm font-medium"
+                            >
+                                Cancel
+                            </button>
+                        </DialogClose>
+
+                        <Link
+                            href="/account/addresses"
+                            className="rounded-lg bg-neutral-950 px-4 py-2 text-center text-sm font-medium text-white"
+                        >
+                            Add address
+                        </Link>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </StorefrontLayout>
     );
 }

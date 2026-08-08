@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
+use App\Models\Address;
 use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
@@ -141,6 +142,11 @@ class PlaceOrder
                     }
                 }
 
+                $shippingAddress = $this->resolveShippingAddress(
+                    user: $user,
+                    data: $data,
+                );
+
                 $order = Order::query()->create([
                     'order_number' => 'UP-'.Str::upper(
                         (string) Str::ulid(),
@@ -153,14 +159,12 @@ class PlaceOrder
                     'customer_email' => (string) $data['customer_email'],
                     'customer_phone' => (string) $data['customer_phone'],
 
-                    'shipping_address_line_1' => (string) $data['shipping_address_line_1'],
-                    'shipping_address_line_2' => $this->nullableString(
-                        $data['shipping_address_line_2'] ?? null,
-                    ),
-                    'shipping_city' => (string) $data['shipping_city'],
-                    'shipping_province' => (string) $data['shipping_province'],
-                    'shipping_postal_code' => (string) $data['shipping_postal_code'],
-                    'shipping_country' => 'PH',
+                    'shipping_address_line_1' => $shippingAddress['address_line_1'],
+                    'shipping_address_line_2' => $shippingAddress['address_line_2'],
+                    'shipping_city' => $shippingAddress['city'],
+                    'shipping_province' => $shippingAddress['province'],
+                    'shipping_postal_code' => $shippingAddress['postal_code'],
+                    'shipping_country' => $shippingAddress['country'],
 
                     'shipping_method' => $shippingMethod,
 
@@ -255,6 +259,82 @@ class PlaceOrder
         $this->notifyCustomer($order);
 
         return $order;
+    }
+
+    /**
+     * Resolve an existing customer address or persist the customer's first
+     * checkout address as their default address.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{
+     *     address_line_1: string,
+     *     address_line_2: string|null,
+     *     city: string,
+     *     province: string,
+     *     postal_code: string,
+     *     country: string
+     * }
+     */
+    private function resolveShippingAddress(
+        ?User $user,
+        array $data,
+    ): array {
+        if (
+            $user !== null
+            && $user->addresses()->exists()
+        ) {
+            $addressId = $data['shipping_address_id'] ?? null;
+
+            if (! is_numeric($addressId)) {
+                throw ValidationException::withMessages([
+                    'shipping_address_id' => 'Please select a shipping address.',
+                ]);
+            }
+
+            $address = $user
+                ->addresses()
+                ->find((int) $addressId);
+
+            if (! $address instanceof Address) {
+                throw ValidationException::withMessages([
+                    'shipping_address_id' => 'The selected shipping address is invalid.',
+                ]);
+            }
+
+            return [
+                'address_line_1' => $address->address_line_1,
+                'address_line_2' => $address->address_line_2,
+                'city' => $address->city,
+                'province' => $address->province,
+                'postal_code' => $address->postal_code,
+                'country' => $address->country,
+            ];
+        }
+
+        $shippingAddress = [
+            'address_line_1' => (string) $data['shipping_address_line_1'],
+            'address_line_2' => $this->nullableString(
+                $data['shipping_address_line_2'] ?? null,
+            ),
+            'city' => (string) $data['shipping_city'],
+            'province' => (string) $data['shipping_province'],
+            'postal_code' => (string) $data['shipping_postal_code'],
+            'country' => 'PH',
+        ];
+
+        if ($user !== null) {
+            $user
+                ->addresses()
+                ->create([
+                    'label' => null,
+                    'recipient_name' => (string) $data['customer_name'],
+                    'phone' => (string) $data['customer_phone'],
+                    ...$shippingAddress,
+                    'is_default' => true,
+                ]);
+        }
+
+        return $shippingAddress;
     }
 
     private function notifyCustomer(Order $order): void

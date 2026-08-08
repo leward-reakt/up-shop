@@ -5,6 +5,7 @@ namespace Tests\Feature\Storefront;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Models\Address;
 use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
@@ -40,6 +41,8 @@ class CheckoutTest extends TestCase
             ->assertInertia(
                 fn (Assert $page): Assert => $page
                     ->component('checkout/index')
+                    ->where('is_authenticated', false)
+                    ->has('saved_addresses', 0)
                     ->has('items', 1)
                     ->where(
                         'items.0.product_id',
@@ -179,9 +182,14 @@ class CheckoutTest extends TestCase
                 'reference_id' => $order->id,
             ],
         );
+
+        $this->assertDatabaseCount(
+            'addresses',
+            0,
+        );
     }
 
-    public function test_authenticated_checkout_clears_database_cart(): void
+    public function test_authenticated_checkout_clears_database_cart_and_saves_first_address(): void
     {
         $this->createStoreSettings();
 
@@ -226,6 +234,269 @@ class CheckoutTest extends TestCase
                 'cart_id' => $cart->id,
                 'product_id' => $product->id,
             ],
+        );
+
+        $address = $user
+            ->addresses()
+            ->firstOrFail();
+
+        $this->assertTrue(
+            $address->is_default,
+        );
+
+        $this->assertSame(
+            $user->id,
+            $address->user_id,
+        );
+
+        $this->assertSame(
+            $user->name,
+            $address->recipient_name,
+        );
+
+        $this->assertSame(
+            '09171234567',
+            $address->phone,
+        );
+
+        $this->assertSame(
+            '123 Test Street',
+            $address->address_line_1,
+        );
+
+        $this->assertSame(
+            'Makati',
+            $address->city,
+        );
+
+        $this->assertSame(
+            'Metro Manila',
+            $address->province,
+        );
+
+        $this->assertSame(
+            '1200',
+            $address->postal_code,
+        );
+
+        $this->assertSame(
+            'PH',
+            $address->country,
+        );
+    }
+
+    public function test_authenticated_checkout_exposes_default_saved_address_for_prefill(): void
+    {
+        $this->createStoreSettings();
+
+        $user = User::factory()->create();
+
+        $product = Product::factory()->create([
+            'stock_quantity' => 5,
+        ]);
+
+        $cart = $user->cart()->create();
+
+        $cart->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $this->createAddress(
+            user: $user,
+            overrides: [
+                'label' => 'Office',
+                'address_line_1' => '1 Office Road',
+                'is_default' => false,
+            ],
+        );
+
+        $defaultAddress = $this->createAddress(
+            user: $user,
+            overrides: [
+                'label' => 'Home',
+                'address_line_1' => '99 Home Street',
+                'city' => 'Quezon City',
+                'postal_code' => '1100',
+                'is_default' => true,
+            ],
+        );
+
+        $this
+            ->actingAs($user)
+            ->get('/checkout')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('checkout/index')
+                    ->where('is_authenticated', true)
+                    ->has('saved_addresses', 2)
+                    ->where(
+                        'saved_addresses.0.id',
+                        $defaultAddress->id,
+                    )
+                    ->where(
+                        'saved_addresses.0.is_default',
+                        true,
+                    )
+                    ->where(
+                        'saved_addresses.0.address_line_1',
+                        '99 Home Street',
+                    )
+                    ->where(
+                        'saved_addresses.0.city',
+                        'Quezon City',
+                    )
+                    ->where(
+                        'saved_addresses.0.postal_code',
+                        '1100',
+                    ),
+            );
+    }
+
+    public function test_authenticated_checkout_uses_selected_saved_address_snapshot(): void
+    {
+        $this->createStoreSettings();
+
+        $user = User::factory()->create([
+            'phone' => '09171234567',
+        ]);
+
+        $product = Product::factory()->create([
+            'stock_quantity' => 5,
+        ]);
+
+        $cart = $user->cart()->create();
+
+        $cart->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $address = $this->createAddress(
+            user: $user,
+            overrides: [
+                'label' => 'Office',
+                'address_line_1' => '456 Saved Avenue',
+                'address_line_2' => 'Unit 8',
+                'city' => 'Pasig',
+                'province' => 'Metro Manila',
+                'postal_code' => '1600',
+                'is_default' => true,
+            ],
+        );
+
+        $this
+            ->actingAs($user)
+            ->post(
+                '/checkout',
+                $this->checkoutPayload([
+                    'customer_name' => $user->name,
+                    'customer_email' => $user->email,
+                    'customer_phone' => '09171234567',
+
+                    'shipping_address_id' => $address->id,
+
+                    // These values are intentionally manipulated. When a saved
+                    // address is selected, the server-side address must win.
+                    'shipping_address_line_1' => 'Tampered Address',
+                    'shipping_address_line_2' => 'Tampered Unit',
+                    'shipping_city' => 'Tampered City',
+                    'shipping_province' => 'Tampered Province',
+                    'shipping_postal_code' => '9999',
+                ]),
+            )
+            ->assertRedirect(route('checkout.success'));
+
+        $order = Order::query()->firstOrFail();
+
+        $this->assertSame(
+            '456 Saved Avenue',
+            $order->shipping_address_line_1,
+        );
+
+        $this->assertSame(
+            'Unit 8',
+            $order->shipping_address_line_2,
+        );
+
+        $this->assertSame(
+            'Pasig',
+            $order->shipping_city,
+        );
+
+        $this->assertSame(
+            'Metro Manila',
+            $order->shipping_province,
+        );
+
+        $this->assertSame(
+            '1600',
+            $order->shipping_postal_code,
+        );
+
+        $this->assertSame(
+            'PH',
+            $order->shipping_country,
+        );
+
+        $this->assertSame(
+            1,
+            $user->addresses()->count(),
+        );
+    }
+
+    public function test_authenticated_customer_cannot_checkout_with_another_customers_address(): void
+    {
+        $this->createStoreSettings();
+
+        $user = User::factory()->create();
+
+        $otherUser = User::factory()->create();
+
+        $product = Product::factory()->create([
+            'stock_quantity' => 5,
+        ]);
+
+        $cart = $user->cart()->create();
+
+        $cart->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $this->createAddress(
+            user: $user,
+            overrides: [
+                'is_default' => true,
+            ],
+        );
+
+        $otherAddress = $this->createAddress(
+            user: $otherUser,
+            overrides: [
+                'address_line_1' => 'Private Address',
+                'is_default' => true,
+            ],
+        );
+
+        $this
+            ->actingAs($user)
+            ->post(
+                '/checkout',
+                $this->checkoutPayload([
+                    'customer_name' => $user->name,
+                    'customer_email' => $user->email,
+                    'shipping_address_id' => $otherAddress->id,
+                ]),
+            )
+            ->assertSessionHasErrors(
+                'shipping_address_id',
+            );
+
+        $this->assertDatabaseCount(
+            'orders',
+            0,
         );
     }
 
@@ -485,6 +756,7 @@ class CheckoutTest extends TestCase
             'customer_email' => 'customer@example.com',
             'customer_phone' => '09171234567',
 
+            'shipping_address_id' => null,
             'shipping_address_line_1' => '123 Test Street',
             'shipping_address_line_2' => null,
             'shipping_city' => 'Makati',
@@ -498,6 +770,30 @@ class CheckoutTest extends TestCase
 
             ...$overrides,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function createAddress(
+        User $user,
+        array $overrides = [],
+    ): Address {
+        return $user
+            ->addresses()
+            ->create([
+                'label' => 'Home',
+                'recipient_name' => 'Test Customer',
+                'phone' => '09171234567',
+                'address_line_1' => '123 Test Street',
+                'address_line_2' => null,
+                'city' => 'Makati',
+                'province' => 'Metro Manila',
+                'postal_code' => '1200',
+                'country' => 'PH',
+                'is_default' => false,
+                ...$overrides,
+            ]);
     }
 
     /**

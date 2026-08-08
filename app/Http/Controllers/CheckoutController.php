@@ -7,6 +7,7 @@ use App\Actions\Orders\PlaceOrder;
 use App\Enums\PaymentMethod;
 use App\Enums\ShippingMethod;
 use App\Http\Requests\CheckoutRequest;
+use App\Models\Address;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,6 +65,31 @@ class CheckoutController extends Controller
 
         $user = $request->user();
 
+        $savedAddresses = $user === null
+            ? []
+            : $user
+                ->addresses()
+                ->orderByDesc('is_default')
+                ->orderBy('id')
+                ->get()
+                ->map(
+                    fn (Address $address): array => [
+                        'id' => $address->id,
+                        'label' => $address->label,
+                        'recipient_name' => $address->recipient_name,
+                        'phone' => $address->phone,
+                        'address_line_1' => $address->address_line_1,
+                        'address_line_2' => $address->address_line_2,
+                        'city' => $address->city,
+                        'province' => $address->province,
+                        'postal_code' => $address->postal_code,
+                        'country' => $address->country,
+                        'is_default' => $address->is_default,
+                    ],
+                )
+                ->values()
+                ->all();
+
         return Inertia::render('checkout/index', [
             'items' => $items
                 ->map(
@@ -118,6 +144,10 @@ class CheckoutController extends Controller
             ],
 
             'selected_shipping_method' => $shippingMethod->value,
+
+            'is_authenticated' => $user !== null,
+
+            'saved_addresses' => $savedAddresses,
 
             'customer' => [
                 'name' => $user->name ?? '',

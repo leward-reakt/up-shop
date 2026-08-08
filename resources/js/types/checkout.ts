@@ -1,3 +1,5 @@
+import type { AccountAddress } from './account';
+
 export type CheckoutItem = {
     product_id: number;
     name: string;
@@ -28,11 +30,14 @@ export type CheckoutCustomer = {
     phone: string;
 };
 
+export type CheckoutAddress = AccountAddress;
+
 export type CheckoutFormData = {
     customer_name: string;
     customer_email: string;
     customer_phone: string;
 
+    shipping_address_id: number | null;
     shipping_address_line_1: string;
     shipping_address_line_2: string;
     shipping_city: string;
