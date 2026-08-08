@@ -1,6 +1,8 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Price } from '@/components/price';
+import { QuantityInput } from '@/components/quantity-input';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type { CatalogProductDetails } from '@/types';
 
@@ -22,6 +24,20 @@ export default function ProductShow({ product }: ProductShowProps) {
         selectedImage?.alt_text ?? product.image_alt ?? product.name;
 
     const inStock = product.stock_quantity > 0;
+
+    const form = useForm<{
+        product_id: number;
+        quantity: number;
+    }>({
+        product_id: product.id,
+        quantity: 1,
+    });
+
+    const addToCart = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        form.post('/cart/items');
+    };
 
     return (
         <StorefrontLayout>
@@ -111,6 +127,51 @@ export default function ProductShow({ product }: ProductShowProps) {
                                     : 'Out of stock'}
                             </p>
                         </div>
+
+                        {inStock && (
+                            <form
+                                onSubmit={addToCart}
+                                className="border-y py-6"
+                            >
+                                <div className="flex flex-wrap items-end gap-4">
+                                    <div>
+                                        <p className="mb-2 text-sm font-medium">
+                                            Quantity
+                                        </p>
+
+                                        <QuantityInput
+                                            value={form.data.quantity}
+                                            max={product.stock_quantity}
+                                            disabled={form.processing}
+                                            onChange={(quantity) =>
+                                                form.setData(
+                                                    'quantity',
+                                                    quantity,
+                                                )
+                                            }
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={form.processing || !inStock}
+                                        className="h-10 rounded-lg bg-neutral-950 px-6 text-sm font-medium text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {form.processing
+                                            ? 'Adding...'
+                                            : 'Add to cart'}
+                                    </button>
+                                </div>
+
+                                {(form.errors.quantity ||
+                                    form.errors.product_id) && (
+                                    <p className="mt-3 text-sm text-red-600">
+                                        {form.errors.quantity ??
+                                            form.errors.product_id}
+                                    </p>
+                                )}
+                            </form>
+                        )}
 
                         {product.description && (
                             <div className="border-t pt-6">

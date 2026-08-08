@@ -27,6 +27,10 @@ export default function StorefrontLayout({ children }: PropsWithChildren) {
                             Shop
                         </Link>
 
+                        <Link href="/cart" className="hover:text-neutral-600">
+                            Cart
+                        </Link>
+
                         {auth.user ? (
                             <Link
                                 href="/dashboard"
