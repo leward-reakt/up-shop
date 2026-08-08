@@ -2,6 +2,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { CartItem } from '@/components/cart-item';
+import { CartRemoveConfirmationDialog } from '@/components/cart-remove-confirmation-dialog';
 import { Price } from '@/components/price';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type { CartLineItem, CartTotals } from '@/types';
@@ -18,6 +19,8 @@ export default function CartPage({
     bulk_remove_enabled,
 }: CartPageProps) {
     const [isBulkRemoveMode, setIsBulkRemoveMode] = useState(false);
+    const [bulkRemoveConfirmationOpen, setBulkRemoveConfirmationOpen] =
+        useState(false);
 
     const discountForm = useForm<{
         discount_code: string;
@@ -57,6 +60,7 @@ export default function CartPage({
         }
 
         bulkRemoveForm.reset();
+        setBulkRemoveConfirmationOpen(false);
         setIsBulkRemoveMode((current) => !current);
     };
 
@@ -81,7 +85,15 @@ export default function CartPage({
         );
     };
 
-    const removeSelected = () => {
+    const requestRemoveSelected = () => {
+        if (selectedCount === 0) {
+            return;
+        }
+
+        setBulkRemoveConfirmationOpen(true);
+    };
+
+    const confirmRemoveSelected = () => {
         if (selectedCount === 0) {
             return;
         }
@@ -90,6 +102,7 @@ export default function CartPage({
             preserveScroll: true,
             onSuccess: () => {
                 bulkRemoveForm.reset();
+                setBulkRemoveConfirmationOpen(false);
                 setIsBulkRemoveMode(false);
             },
         });
@@ -165,7 +178,7 @@ export default function CartPage({
 
                                     <button
                                         type="button"
-                                        onClick={removeSelected}
+                                        onClick={requestRemoveSelected}
                                         disabled={
                                             selectedCount === 0 ||
                                             bulkRemoveForm.processing
@@ -359,6 +372,14 @@ export default function CartPage({
                     </div>
                 )}
             </div>
+
+            <CartRemoveConfirmationDialog
+                open={bulkRemoveConfirmationOpen}
+                itemCount={selectedCount}
+                processing={bulkRemoveForm.processing}
+                onOpenChange={setBulkRemoveConfirmationOpen}
+                onConfirm={confirmRemoveSelected}
+            />
         </StorefrontLayout>
     );
 }
