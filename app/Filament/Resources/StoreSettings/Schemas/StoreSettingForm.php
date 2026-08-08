@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\StoreSettings\Schemas;
 
+use App\Enums\LandingPageTheme;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -25,6 +27,16 @@ class StoreSettingForm
                     ->directory('store')
                     ->visibility('public')
                     ->maxSize(5120),
+
+                Select::make('landing_page_theme')
+                    ->label('Landing page theme')
+                    ->options(LandingPageTheme::options())
+                    ->default(LandingPageTheme::Default->value)
+                    ->required()
+                    ->helperText(
+                        'Controls the design used by the public home page. '
+                        .'Shop, cart, checkout, and account pages are unchanged.',
+                    ),
 
                 TextInput::make('store_email')
                     ->email()

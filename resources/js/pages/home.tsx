@@ -1,13 +1,33 @@
 import { Head, Link } from '@inertiajs/react';
+import FashionEditorialLandingPage from '@/components/landing-pages/fashion-editorial';
+import type { FashionEditorialCategory } from '@/components/landing-pages/fashion-editorial';
 import { ProductCard } from '@/components/product-card';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type { CatalogProduct } from '@/types';
 
 type HomeProps = {
+    theme: 'default' | 'fashion_editorial';
     featuredProducts: CatalogProduct[];
+    newArrivals: CatalogProduct[];
+    categories: FashionEditorialCategory[];
 };
 
-export default function Home({ featuredProducts }: HomeProps) {
+export default function Home({
+    theme,
+    featuredProducts,
+    newArrivals,
+    categories,
+}: HomeProps) {
+    if (theme === 'fashion_editorial') {
+        return (
+            <FashionEditorialLandingPage
+                categories={categories}
+                featuredProducts={featuredProducts}
+                newArrivals={newArrivals}
+            />
+        );
+    }
+
     return (
         <StorefrontLayout>
             <Head title="Home" />

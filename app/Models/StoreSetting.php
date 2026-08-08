@@ -17,6 +17,7 @@ class StoreSetting extends Model
         'free_shipping_threshold',
         'tax_rate_basis_points',
         'social_links',
+        'landing_page_theme',
     ];
 
     /**
