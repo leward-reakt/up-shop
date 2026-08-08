@@ -99,7 +99,12 @@ class ProductForm
                             ->directory('products')
                             ->visibility('public')
                             ->maxSize(5120)
-                            ->preventFilePathTampering()
+                            ->preventFilePathTampering(
+                                allowFilePathUsing: fn (string $file): bool => str_starts_with(
+                                    $file,
+                                    'products/',
+                                ) && ! str_contains($file, '..'),
+                            )
                             ->required(),
 
                         TextInput::make('alt_text')
