@@ -228,7 +228,9 @@ export default function CheckoutSuccess({ order }: CheckoutSuccessProps) {
                                                     </>
                                                 )}
                                                 <br />
-                                                {order.shipping_address.city},{' '}
+                                                {
+                                                    order.shipping_address.city
+                                                },{' '}
                                                 {
                                                     order.shipping_address
                                                         .province
