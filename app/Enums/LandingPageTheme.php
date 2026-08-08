@@ -5,13 +5,21 @@ namespace App\Enums;
 enum LandingPageTheme: string
 {
     case Default = 'default';
+
+    /**
+     * Keep the persisted value for backward compatibility.
+     *
+     * The customer-facing design is now Fashion Elegant rather than
+     * Fashion Editorial, but changing the stored value would require
+     * unnecessary data migration for an MVP-only presentation change.
+     */
     case FashionEditorial = 'fashion_editorial';
 
     public function label(): string
     {
         return match ($this) {
             self::Default => 'Default Storefront',
-            self::FashionEditorial => 'Fashion Editorial',
+            self::FashionEditorial => 'Fashion Elegant',
         };
     }
 
