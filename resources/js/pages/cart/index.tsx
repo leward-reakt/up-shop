@@ -19,6 +19,8 @@ export default function CartPage({ items, totals }: CartPageProps) {
 
     const hasAvailabilityIssues = items.some((item) => !item.is_available);
 
+    const canCheckout = !hasAvailabilityIssues && !totals.discount_error;
+
     const applyDiscount = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -128,6 +130,7 @@ export default function CartPage({ items, totals }: CartPageProps) {
                                             {totals.discount_total > 0
                                                 ? '−'
                                                 : ''}
+
                                             <Price
                                                 amount={totals.discount_total}
                                             />
@@ -208,6 +211,32 @@ export default function CartPage({ items, totals }: CartPageProps) {
                                                 </button>
                                             </div>
                                         )}
+                                </div>
+
+                                <div className="mt-6 border-t pt-6">
+                                    {canCheckout ? (
+                                        <Link
+                                            href="/checkout"
+                                            className="flex w-full items-center justify-center rounded-lg bg-neutral-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
+                                        >
+                                            Proceed to checkout
+                                        </Link>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                disabled
+                                                className="w-full cursor-not-allowed rounded-lg bg-neutral-300 px-5 py-3 text-sm font-medium text-neutral-600"
+                                            >
+                                                Proceed to checkout
+                                            </button>
+
+                                            <p className="mt-3 text-center text-xs leading-5 text-neutral-500">
+                                                Resolve the cart issues above
+                                                before continuing.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </aside>
