@@ -12,7 +12,6 @@ class ProductImage extends Model
         'path',
         'alt_text',
         'sort_order',
-        'is_primary',
     ];
 
     /**
@@ -30,7 +29,6 @@ class ProductImage extends Model
     {
         return [
             'sort_order' => 'integer',
-            'is_primary' => 'boolean',
         ];
     }
 }

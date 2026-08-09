@@ -14,7 +14,7 @@ class ProductImageOrderingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_storefront_uses_sort_order_for_main_image_even_when_is_primary_is_stale(): void
+    public function test_storefront_uses_sort_order_for_main_image(): void
     {
         $this->createStoreSettings();
 
@@ -36,23 +36,20 @@ class ProductImageOrderingTest extends TestCase
                 'is_featured' => true,
             ]);
 
+        /*
+         * Create the secondary image first so this test proves product image
+         * selection follows sort_order rather than database insertion order.
+         */
+        $product->images()->create([
+            'path' => 'products/second-by-sort-order.jpg',
+            'alt_text' => 'Second image by sort order',
+            'sort_order' => 1,
+        ]);
+
         $product->images()->create([
             'path' => 'products/first-by-sort-order.jpg',
             'alt_text' => 'First image by sort order',
             'sort_order' => 0,
-            'is_primary' => false,
-        ]);
-
-        /*
-         * Simulate legacy or externally-written state that contradicts the
-         * administrator-controlled image ordering. The storefront must ignore
-         * this flag and continue to use sort_order as its source of truth.
-         */
-        $product->images()->create([
-            'path' => 'products/stale-primary.jpg',
-            'alt_text' => 'Stale primary image',
-            'sort_order' => 1,
-            'is_primary' => true,
         ]);
 
         $mainImageUrl = Storage::disk('public')->url(
@@ -60,7 +57,7 @@ class ProductImageOrderingTest extends TestCase
         );
 
         $secondaryImageUrl = Storage::disk('public')->url(
-            'products/stale-primary.jpg',
+            'products/second-by-sort-order.jpg',
         );
 
         $this

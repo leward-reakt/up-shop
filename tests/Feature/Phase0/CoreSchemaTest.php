@@ -34,7 +34,6 @@ class CoreSchemaTest extends TestCase
             'path' => 'products/example.jpg',
             'alt_text' => 'Example product',
             'sort_order' => 0,
-            'is_primary' => true,
         ]);
 
         $cart = $user->cart()->create();
