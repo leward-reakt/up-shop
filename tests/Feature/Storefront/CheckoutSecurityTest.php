@@ -56,6 +56,27 @@ class CheckoutSecurityTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_checkout_page_redirects_to_cart_when_requested_quantity_exceeds_current_stock(): void
+    {
+        $product = Product::factory()->create([
+            'price' => 100_000,
+            'stock_quantity' => 1,
+            'is_active' => true,
+        ]);
+
+        $this
+            ->withSession([
+                'cart.items' => [
+                    $product->id => 2,
+                ],
+            ])
+            ->get(route('checkout.index'))
+            ->assertRedirect(route('cart.index'))
+            ->assertSessionHasErrors([
+                'cart' => "{$product->name} only has 1 unit(s) available. Update the quantity before checkout.",
+            ]);
+    }
+
     public function test_failed_guest_checkout_keeps_cart_and_does_not_create_purchase_records(): void
     {
         $product = Product::factory()->create([

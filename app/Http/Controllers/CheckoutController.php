@@ -44,6 +44,25 @@ class CheckoutController extends Controller
                 ]);
         }
 
+        foreach ($items as $item) {
+            $product = $item['product'];
+            $quantity = $item['quantity'];
+
+            if ($product->stock_quantity < 1) {
+                return to_route('cart.index')
+                    ->withErrors([
+                        'cart' => "{$product->name} is currently out of stock. Update your cart before checkout.",
+                    ]);
+            }
+
+            if ($quantity > $product->stock_quantity) {
+                return to_route('cart.index')
+                    ->withErrors([
+                        'cart' => "{$product->name} only has {$product->stock_quantity} unit(s) available. Update the quantity before checkout.",
+                    ]);
+            }
+        }
+
         $shippingMethod = ShippingMethod::tryFrom(
             (string) $request->query(
                 'shipping_method',
