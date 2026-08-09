@@ -84,10 +84,23 @@ class ProductForm
 
                 TextInput::make('stock_quantity')
                     ->label('Stock quantity')
-                    ->required()
+                    ->required(
+                        fn (string $operation): bool => $operation === 'create',
+                    )
                     ->integer()
                     ->minValue(0)
-                    ->default(0),
+                    ->default(0)
+                    ->disabled(
+                        fn (string $operation): bool => $operation === 'edit',
+                    )
+                    ->saved(
+                        fn (string $operation): bool => $operation === 'create',
+                    )
+                    ->helperText(
+                        fn (string $operation): string => $operation === 'edit'
+                            ? 'Use the Adjust stock action from the Products list so manual inventory changes are audited.'
+                            : 'Set the initial stock quantity. Future manual changes must use Adjust stock.',
+                    ),
 
                 TextInput::make('low_stock_threshold')
                     ->label('Low-stock threshold')
