@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Actions\Orders\CalculateCheckoutTotals;
 use App\Actions\Orders\PlaceOrder;
 use App\Enums\PaymentMethod;
-use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Address;
@@ -16,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -23,6 +23,8 @@ use Inertia\Response;
 
 class CheckoutController extends Controller
 {
+    private const CHECKOUT_LOCK_SECONDS = 60;
+
     public function index(
         Request $request,
         CalculateCheckoutTotals $calculateCheckoutTotals,
@@ -64,12 +66,23 @@ class CheckoutController extends Controller
             }
         }
 
+        $pickupLocation = StoreSetting::currentBusinessAddress();
+
         $shippingMethod = ShippingMethod::tryFrom(
             (string) $request->query(
                 'shipping_method',
                 ShippingMethod::FlatRate->value,
             ),
         ) ?? ShippingMethod::FlatRate;
+
+        // Store Pickup is only usable when customers can be shown a real
+        // pickup location from the single Store Settings record.
+        if (
+            $shippingMethod === ShippingMethod::StorePickup
+            && $pickupLocation === null
+        ) {
+            $shippingMethod = ShippingMethod::FlatRate;
+        }
 
         $discountCode = $this->discountCode($request);
 
@@ -111,6 +124,14 @@ class CheckoutController extends Controller
                 )
                 ->values()
                 ->all();
+
+        $shippingMethods = [
+            ShippingMethod::FlatRate,
+        ];
+
+        if ($pickupLocation !== null) {
+            $shippingMethods[] = ShippingMethod::StorePickup;
+        }
 
         $bankTransferInstructions =
             StoreSetting::currentBankTransferInstructions();
@@ -165,8 +186,10 @@ class CheckoutController extends Controller
                     'value' => $method->value,
                     'label' => $method->label(),
                 ],
-                ShippingMethod::cases(),
+                $shippingMethods,
             ),
+
+            'pickup_location' => $pickupLocation,
 
             'payment_options' => $paymentOptions,
 
@@ -190,35 +213,54 @@ class CheckoutController extends Controller
         CheckoutRequest $request,
         PlaceOrder $placeOrder,
     ): RedirectResponse {
-        $cartQuantities = $this->cartQuantities($request);
+        $response = Cache::lock(
+            $this->checkoutLockKey($request),
+            self::CHECKOUT_LOCK_SECONDS,
+        )->get(function () use (
+            $request,
+            $placeOrder,
+        ): RedirectResponse {
+            // Read the cart only after acquiring the checkout lock. A
+            // concurrent request must not retain a stale copy of a cart that
+            // another checkout request is currently consuming.
+            $cartQuantities = $this->cartQuantities($request);
 
-        if ($cartQuantities === []) {
+            if ($cartQuantities === []) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $order = $placeOrder->handle(
+                user: $request->user(),
+                cartQuantities: $cartQuantities,
+                data: $request->validated(),
+                discountCode: $this->discountCode($request),
+            );
+
+            // Guest carts live in the session, so they are cleared only after
+            // the database transaction completed successfully.
+            if ($request->user() === null) {
+                $request->session()->forget('cart.items');
+            }
+
+            $request->session()->forget('cart.discount_code');
+
+            $request->session()->put(
+                'checkout.order_id',
+                $order->id,
+            );
+
+            return to_route('checkout.success');
+        });
+
+        if (! $response instanceof RedirectResponse) {
             throw ValidationException::withMessages([
-                'cart' => 'Your cart is empty.',
+                'cart' => 'Your order is already being processed. Please wait a moment before trying again.',
             ]);
         }
 
-        $order = $placeOrder->handle(
-            user: $request->user(),
-            cartQuantities: $cartQuantities,
-            data: $request->validated(),
-            discountCode: $this->discountCode($request),
-        );
-
-        // Guest carts live in the session, so they are cleared only after
-        // the database transaction completed successfully.
-        if ($request->user() === null) {
-            $request->session()->forget('cart.items');
-        }
-
-        $request->session()->forget('cart.discount_code');
-
-        $request->session()->put(
-            'checkout.order_id',
-            $order->id,
-        );
-
-        return to_route('checkout.success');
+        return $response;
     }
 
     public function success(Request $request): Response
@@ -247,17 +289,19 @@ class CheckoutController extends Controller
             abort(403);
         }
 
-        // Bank details are actionable only while a manual bank transfer
-        // is still awaiting verification.
-        $bankTransferInstructions = (
+        $bankTransferInstructions =
             $order->payment_method === PaymentMethod::BankTransfer
-            && $order->payment_status === PaymentStatus::Pending
-        )
-            ? StoreSetting::currentBankTransferInstructions()
-            : null;
+                ? StoreSetting::currentBankTransferInstructions()
+                : null;
+
+        $pickupLocation =
+            $order->shipping_method === ShippingMethod::StorePickup
+                ? StoreSetting::currentBusinessAddress()
+                : null;
 
         return Inertia::render('checkout/success', [
             'bank_transfer_instructions' => $bankTransferInstructions,
+            'pickup_location' => $pickupLocation,
 
             'order' => [
                 'order_number' => $order->order_number,
@@ -455,6 +499,17 @@ class CheckoutController extends Controller
         return $discountCode === ''
             ? null
             : $discountCode;
+    }
+
+    private function checkoutLockKey(Request $request): string
+    {
+        $userId = $request->user()?->getAuthIdentifier();
+
+        $scope = $userId === null
+            ? 'session:'.$request->session()->getId()
+            : 'user:'.$userId;
+
+        return 'checkout:place-order:'.$scope;
     }
 
     private function paymentMethodLabel(

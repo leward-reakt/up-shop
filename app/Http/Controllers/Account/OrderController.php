@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Account;
 
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\ShippingMethod;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\StoreSetting;
@@ -57,8 +58,14 @@ class OrderController extends Controller
             ? StoreSetting::currentBankTransferInstructions()
             : null;
 
+        $pickupLocation =
+            $order->shipping_method === ShippingMethod::StorePickup
+                ? StoreSetting::currentBusinessAddress()
+                : null;
+
         return Inertia::render('account/orders/show', [
             'bank_transfer_instructions' => $bankTransferInstructions,
+            'pickup_location' => $pickupLocation,
 
             'order' => [
                 'id' => $order->id,

@@ -32,6 +32,25 @@ class StoreSetting extends Model
             ?? self::DEFAULT_CURRENCY;
     }
 
+    public static function currentBusinessAddress(): ?string
+    {
+        $settings = static::query()->first();
+
+        $address = $settings?->getAttribute(
+            'business_address',
+        );
+
+        if (! is_string($address)) {
+            return null;
+        }
+
+        $address = trim($address);
+
+        return $address === ''
+            ? null
+            : $address;
+    }
+
     public static function currentBankTransferInstructions(): ?string
     {
         $settings = static::query()->first();

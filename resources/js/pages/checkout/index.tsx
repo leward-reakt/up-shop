@@ -27,6 +27,7 @@ type CheckoutProps = {
     items: CheckoutItem[];
     totals: CheckoutTotals;
     shipping_options: CheckoutOption[];
+    pickup_location: string | null;
     payment_options: CheckoutOption[];
     bank_transfer_instructions: string | null;
     selected_shipping_method: string;
@@ -46,6 +47,7 @@ export default function Checkout({
     items,
     totals,
     shipping_options,
+    pickup_location,
     payment_options,
     bank_transfer_instructions,
     selected_shipping_method,
@@ -93,6 +95,10 @@ export default function Checkout({
         saved_addresses.find(
             (address) => address.id === data.shipping_address_id,
         ) ?? null;
+
+    const isStorePickup = data.shipping_method === 'store_pickup';
+
+    const pickupLocation = pickup_location?.trim() || null;
 
     const cartErrorValue = Object.entries(errors).find(
         ([field]) => field === 'cart',
@@ -196,8 +202,9 @@ export default function Checkout({
 
                                     <p className="mt-5 max-w-xl text-sm leading-7 text-neutral-600">
                                         Review your selection, confirm your
-                                        delivery details, and choose how you
-                                        would like to complete your purchase.
+                                        contact and fulfillment details, and
+                                        choose how you would like to complete
+                                        your purchase.
                                     </p>
                                 </div>
 
@@ -223,8 +230,8 @@ export default function Checkout({
                             </h1>
 
                             <p className="mt-2 text-neutral-600">
-                                Review your order and enter your delivery
-                                details.
+                                Review your order and enter your contact and
+                                fulfillment details.
                             </p>
                         </div>
                     )}
@@ -274,7 +281,11 @@ export default function Checkout({
                                         }
                                     >
                                         Contact information is provided by the
-                                        selected shipping address.
+                                        selected{' '}
+                                        {isStorePickup
+                                            ? 'customer'
+                                            : 'shipping'}{' '}
+                                        address.
                                     </p>
                                 )}
 
@@ -371,7 +382,9 @@ export default function Checkout({
                             <section className={sectionClassName}>
                                 {isFashionEditorial && (
                                     <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
-                                        02 / Delivery
+                                        {isStorePickup
+                                            ? '02 / Customer'
+                                            : '02 / Delivery'}
                                     </p>
                                 )}
 
@@ -384,7 +397,9 @@ export default function Checkout({
                                 >
                                     <div>
                                         <h2 className={sectionTitleClassName}>
-                                            Shipping address
+                                            {isStorePickup
+                                                ? 'Customer address'
+                                                : 'Shipping address'}
                                         </h2>
 
                                         {hasSavedAddresses &&
@@ -419,6 +434,21 @@ export default function Checkout({
                                     )}
                                 </div>
 
+                                {isStorePickup && (
+                                    <p
+                                        className={
+                                            isFashionEditorial
+                                                ? 'mt-6 border-y border-neutral-300 bg-[#eee8e1] px-4 py-4 text-xs leading-6 text-neutral-600'
+                                                : 'mt-3 rounded-lg bg-neutral-50 px-4 py-3 text-sm leading-6 text-neutral-600'
+                                        }
+                                    >
+                                        This address is kept with your customer
+                                        and order information. Your order will
+                                        not be delivered here. Collect it from
+                                        the pickup location shown below.
+                                    </p>
+                                )}
+
                                 {is_authenticated && !hasSavedAddresses && (
                                     <p
                                         className={
@@ -427,10 +457,13 @@ export default function Checkout({
                                                 : 'mt-3 rounded-lg bg-neutral-50 px-4 py-3 text-sm text-neutral-600'
                                         }
                                     >
-                                        Your contact information and shipping
+                                        Your contact information and{' '}
+                                        {isStorePickup
+                                            ? 'customer'
+                                            : 'shipping'}{' '}
                                         address will be saved as your default
-                                        address after your order is successfully
-                                        placed.
+                                        address after your order is
+                                        successfully placed.
                                     </p>
                                 )}
 
@@ -690,6 +723,64 @@ export default function Checkout({
                                     })}
                                 </div>
 
+                                {isStorePickup && (
+                                    <div
+                                        className={
+                                            isFashionEditorial
+                                                ? 'mt-6 border-l border-neutral-300 pl-4'
+                                                : 'mt-4 rounded-lg border bg-neutral-50 p-4'
+                                        }
+                                    >
+                                        <p
+                                            className={
+                                                isFashionEditorial
+                                                    ? 'text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase'
+                                                    : 'text-sm font-medium'
+                                            }
+                                        >
+                                            Pickup location
+                                        </p>
+
+                                        {pickupLocation ? (
+                                            <>
+                                                <p
+                                                    className={
+                                                        isFashionEditorial
+                                                            ? 'mt-3 text-xs leading-6 whitespace-pre-line text-neutral-700'
+                                                            : 'mt-2 text-sm leading-6 whitespace-pre-line text-neutral-700'
+                                                    }
+                                                >
+                                                    {pickupLocation}
+                                                </p>
+
+                                                <p
+                                                    className={
+                                                        isFashionEditorial
+                                                            ? 'mt-4 text-xs leading-6 text-neutral-600'
+                                                            : 'mt-3 text-sm leading-6 text-neutral-600'
+                                                    }
+                                                >
+                                                    Collect your order from
+                                                    this store address once it
+                                                    is ready for pickup.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p
+                                                className={
+                                                    isFashionEditorial
+                                                        ? 'mt-3 text-xs leading-6 text-neutral-600'
+                                                        : 'mt-2 text-sm leading-6 text-neutral-600'
+                                                }
+                                            >
+                                                Pickup location is currently
+                                                unavailable. Choose another
+                                                shipping method.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                                 <InputError
                                     message={errors.shipping_method}
                                     className="mt-3"
@@ -837,7 +928,11 @@ export default function Checkout({
                                             event.target.value,
                                         )
                                     }
-                                    placeholder="Optional delivery or order instructions"
+                                    placeholder={
+                                        isStorePickup
+                                            ? 'Optional pickup or order instructions'
+                                            : 'Optional delivery or order instructions'
+                                    }
                                     className={
                                         isFashionEditorial
                                             ? 'mt-7 min-h-32 w-full resize-y border border-neutral-300 bg-transparent p-4 text-sm leading-6 transition outline-none placeholder:text-neutral-400 focus:border-neutral-950'
@@ -1154,13 +1249,15 @@ export default function Checkout({
                                     : undefined
                             }
                         >
-                            Choose shipping address
+                            {isStorePickup
+                                ? 'Choose customer address'
+                                : 'Choose shipping address'}
                         </DialogTitle>
 
                         <DialogDescription>
-                            Select one of the shipping addresses saved to your
-                            account. Contact information will also use the
-                            selected address.
+                            {isStorePickup
+                                ? 'Select an address saved to your account for your customer and order information. Your pickup location is the store address shown in checkout.'
+                                : 'Select one of the shipping addresses saved to your account. Contact information will also use the selected address.'}
                         </DialogDescription>
                     </DialogHeader>
 

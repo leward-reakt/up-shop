@@ -88,7 +88,11 @@ class CheckoutDuplicateSubmissionTest extends TestCase
             ],
         ]);
 
-        $sessionId = session()->getId();
+        // The request must carry the same session cookie whose ID is used
+        // by the pre-acquired lock. Otherwise StartSession will generate a
+        // different ID and the request will correctly appear as another guest.
+        $session = $this->app['session']->driver();
+        $sessionId = $session->getId();
 
         $lock = Cache::lock(
             'checkout:place-order:session:'.$sessionId,
@@ -99,6 +103,10 @@ class CheckoutDuplicateSubmissionTest extends TestCase
 
         try {
             $this
+                ->withCookie(
+                    $session->getName(),
+                    $sessionId,
+                )
                 ->post(
                     route('checkout.store'),
                     $this->checkoutPayload(),

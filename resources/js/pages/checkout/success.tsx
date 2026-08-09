@@ -6,6 +6,7 @@ import type { CatalogCategory, CheckoutOrder } from '@/types';
 type CheckoutSuccessProps = {
     order: CheckoutOrder;
     bank_transfer_instructions: string | null;
+    pickup_location: string | null;
 };
 
 type CheckoutSuccessSharedProps = {
@@ -18,6 +19,7 @@ type CheckoutSuccessSharedProps = {
 export default function CheckoutSuccess({
     order,
     bank_transfer_instructions,
+    pickup_location,
 }: CheckoutSuccessProps) {
     const page = usePage();
 
@@ -27,9 +29,9 @@ export default function CheckoutSuccess({
 
     const navigationCategories = sharedProps.store?.navigation_categories ?? [];
 
-    const showBankTransferInstructions =
-        order.payment_method === 'bank_transfer' &&
-        order.payment_status === 'pending';
+    const isStorePickup = order.shipping_method === 'store_pickup';
+
+    const pickupLocation = pickup_location?.trim() || null;
 
     if (isFashionEditorial) {
         return (
@@ -104,7 +106,7 @@ export default function CheckoutSuccess({
 
                         <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-20">
                             <div>
-                                {showBankTransferInstructions && (
+                                {order.payment_method === 'bank_transfer' && (
                                     <section className="border-y border-neutral-300 bg-[#eee8e1] px-5 py-6 sm:px-6">
                                         <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
                                             Payment
@@ -213,11 +215,13 @@ export default function CheckoutSuccess({
 
                                 <section className="border-b border-neutral-300 py-10">
                                     <p className="text-[9px] font-medium tracking-[0.18em] text-neutral-500 uppercase">
-                                        Delivery
+                                        {isStorePickup ? 'Pickup' : 'Delivery'}
                                     </p>
 
                                     <h2 className="mt-3 font-serif text-3xl tracking-[-0.025em]">
-                                        Shipping details
+                                        {isStorePickup
+                                            ? 'Pickup details'
+                                            : 'Shipping details'}
                                     </h2>
 
                                     <div className="mt-8 grid gap-8 sm:grid-cols-2">
@@ -233,41 +237,60 @@ export default function CheckoutSuccess({
 
                                         <div>
                                             <p className="text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
-                                                Delivery address
+                                                {isStorePickup
+                                                    ? 'Pickup location'
+                                                    : 'Delivery address'}
                                             </p>
 
-                                            <address className="mt-3 text-sm leading-7 text-neutral-600 not-italic">
-                                                {
-                                                    order.shipping_address
-                                                        .address_line_1
-                                                }
-                                                {order.shipping_address
-                                                    .address_line_2 && (
-                                                    <>
-                                                        <br />
+                                            {isStorePickup ? (
+                                                pickupLocation ? (
+                                                    <p className="mt-3 text-sm leading-7 whitespace-pre-line text-neutral-600">
+                                                        {pickupLocation}
+                                                    </p>
+                                                ) : (
+                                                    <p className="mt-3 text-sm leading-7 text-neutral-600">
+                                                        Pickup location is
+                                                        currently unavailable.
+                                                        Contact the store before
+                                                        collection.
+                                                    </p>
+                                                )
+                                            ) : (
+                                                <address className="mt-3 text-sm leading-7 text-neutral-600 not-italic">
+                                                    {
+                                                        order.shipping_address
+                                                            .address_line_1
+                                                    }
+                                                    {order.shipping_address
+                                                        .address_line_2 && (
+                                                        <>
+                                                            <br />
 
-                                                        {
-                                                            order
-                                                                .shipping_address
-                                                                .address_line_2
-                                                        }
-                                                    </>
-                                                )}
-                                                <br />
-                                                {
-                                                    order.shipping_address.city
-                                                },{' '}
-                                                {
-                                                    order.shipping_address
-                                                        .province
-                                                }{' '}
-                                                {
-                                                    order.shipping_address
-                                                        .postal_code
-                                                }
-                                                <br />
-                                                Philippines
-                                            </address>
+                                                            {
+                                                                order
+                                                                    .shipping_address
+                                                                    .address_line_2
+                                                            }
+                                                        </>
+                                                    )}
+                                                    <br />
+                                                    {
+                                                        order.shipping_address
+                                                            .city
+                                                    }
+                                                    ,{' '}
+                                                    {
+                                                        order.shipping_address
+                                                            .province
+                                                    }{' '}
+                                                    {
+                                                        order.shipping_address
+                                                            .postal_code
+                                                    }
+                                                    <br />
+                                                    Philippines
+                                                </address>
+                                            )}
                                         </div>
                                     </div>
                                 </section>
@@ -465,7 +488,7 @@ export default function CheckoutSuccess({
                         </div>
                     </div>
 
-                    {showBankTransferInstructions && (
+                    {order.payment_method === 'bank_transfer' && (
                         <div className="my-6 rounded-lg border bg-neutral-50 p-4">
                             <h2 className="font-medium">Bank transfer</h2>
 
@@ -539,28 +562,52 @@ export default function CheckoutSuccess({
                     </section>
 
                     <section className="border-b py-6">
-                        <h2 className="text-lg font-semibold">Shipping</h2>
+                        <h2 className="text-lg font-semibold">
+                            {isStorePickup
+                                ? 'Pickup details'
+                                : 'Shipping details'}
+                        </h2>
 
                         <p className="mt-4 font-medium">
                             {order.shipping_method_label}
                         </p>
 
-                        <address className="mt-3 text-sm leading-6 text-neutral-600 not-italic">
-                            {order.shipping_address.address_line_1}
-                            {order.shipping_address.address_line_2 && (
-                                <>
-                                    <br />
+                        {isStorePickup ? (
+                            <div className="mt-3">
+                                <p className="text-sm font-medium">
+                                    Pickup location
+                                </p>
 
-                                    {order.shipping_address.address_line_2}
-                                </>
-                            )}
-                            <br />
-                            {order.shipping_address.city},{' '}
-                            {order.shipping_address.province}{' '}
-                            {order.shipping_address.postal_code}
-                            <br />
-                            Philippines
-                        </address>
+                                {pickupLocation ? (
+                                    <p className="mt-2 text-sm leading-6 whitespace-pre-line text-neutral-600">
+                                        {pickupLocation}
+                                    </p>
+                                ) : (
+                                    <p className="mt-2 text-sm leading-6 text-neutral-600">
+                                        Pickup location is currently
+                                        unavailable. Contact the store before
+                                        collection.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <address className="mt-3 text-sm leading-6 text-neutral-600 not-italic">
+                                {order.shipping_address.address_line_1}
+                                {order.shipping_address.address_line_2 && (
+                                    <>
+                                        <br />
+
+                                        {order.shipping_address.address_line_2}
+                                    </>
+                                )}
+                                <br />
+                                {order.shipping_address.city},{' '}
+                                {order.shipping_address.province}{' '}
+                                {order.shipping_address.postal_code}
+                                <br />
+                                Philippines
+                            </address>
+                        )}
                     </section>
 
                     <section className="py-6">
@@ -603,9 +650,7 @@ export default function CheckoutSuccess({
 
                             {order.tax_total > 0 && (
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-neutral-600">
-                                        Tax
-                                    </span>
+                                    <span className="text-neutral-600">Tax</span>
 
                                     <Price amount={order.tax_total} />
                                 </div>
