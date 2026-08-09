@@ -85,6 +85,11 @@ class StoreSettingForm
                     ->numeric()
                     ->minValue(0)
                     ->step(0.01)
+                    ->helperText(
+                        'Set to 0 for store-wide free shipping. '
+                        .'Otherwise, use the free shipping threshold below '
+                        .'for subtotal-based free shipping.',
+                    )
                     ->formatStateUsing(
                         fn (int|string|null $state): ?string => $state === null
                             ? null
