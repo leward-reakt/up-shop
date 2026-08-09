@@ -1,0 +1,236 @@
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+const product = {
+    name: 'Linen Blend Overshirt',
+    slug: 'linen-blend-overshirt',
+};
+
+async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+    const dimensions = await page.evaluate(() => {
+        const root = document.documentElement;
+
+        return {
+            clientWidth: root.clientWidth,
+            scrollWidth: root.scrollWidth,
+        };
+    });
+
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+    );
+}
+
+test('primary navigation and shop work at the configured viewport', async ({
+    page,
+}, testInfo) => {
+    await page.goto('/');
+
+    await expectNoHorizontalOverflow(page);
+
+    if (testInfo.project.name === 'mobile-chromium') {
+        const menuToggle = page.getByLabel('Open navigation');
+
+        await expect(menuToggle).toBeVisible();
+
+        await menuToggle.click();
+
+        const navigation = page.getByRole('navigation', {
+            name: 'Mobile navigation',
+        });
+
+        await expect(navigation).toBeVisible();
+
+        await expectNoHorizontalOverflow(page);
+
+        await navigation
+            .getByRole('link', {
+                name: 'Shop all',
+                exact: true,
+            })
+            .click();
+    } else {
+        const navigation = page.getByRole('navigation', {
+            name: 'Primary navigation',
+        });
+
+        await expect(navigation).toBeVisible();
+
+        await navigation
+            .getByRole('link', {
+                name: 'Shop',
+                exact: true,
+            })
+            .click();
+    }
+
+    await expect(page).toHaveURL(/\/shop$/);
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Shop the collection.',
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByLabel('Search', {
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByRole('heading', {
+            name: product.name,
+        }),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+});
+
+test('product can move through cart to checkout in the browser', async ({
+    page,
+}) => {
+    await page.goto(`/products/${product.slug}`);
+
+    await expect(
+        page.getByRole('heading', {
+            name: product.name,
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByRole('button', {
+            name: 'Add to cart',
+        }),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+
+    const addToCartButton = page.getByRole('button', {
+        name: 'Add to cart',
+    });
+
+    await addToCartButton.click();
+
+    await expect(addToCartButton).toHaveText('Add to cart');
+
+    await page
+        .getByRole('link', {
+            name: 'Shopping cart',
+        })
+        .click();
+
+    await expect(page).toHaveURL(/\/cart$/);
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Your cart.',
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByText(product.name, {
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    const checkoutLink = page.getByRole('link', {
+        name: 'Proceed to checkout',
+    });
+
+    await expect(checkoutLink).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+
+    await checkoutLink.click();
+
+    await expect(page).toHaveURL(/\/checkout$/);
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Complete your order.',
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByLabel('Full name', {
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Shipping method',
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByRole('button', {
+            name: 'Place order',
+        }),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+});
+
+test('customer can sign in and navigate the account area', async ({ page }) => {
+    await page.goto('/login');
+
+    await page.getByLabel('Email address').fill('customer@example.com');
+
+    await page.getByLabel('Password').fill('password');
+
+    await page
+        .getByRole('button', {
+            name: 'Log in',
+            exact: true,
+        })
+        .click();
+
+    await expect(page).toHaveURL(/\/dashboard$/);
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Your account.',
+        }),
+    ).toBeVisible();
+
+    const accountNavigation = page.getByRole('navigation', {
+        name: 'Account navigation',
+    });
+
+    await expect(accountNavigation).toBeVisible();
+
+    await expect(
+        accountNavigation.getByRole('link', {
+            name: 'Orders',
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await expect(
+        accountNavigation.getByRole('link', {
+            name: 'Addresses',
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+
+    await accountNavigation
+        .getByRole('link', {
+            name: 'Orders',
+            exact: true,
+        })
+        .click();
+
+    await expect(page).toHaveURL(/\/account\/orders$/);
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Your orders.',
+        }),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+});
