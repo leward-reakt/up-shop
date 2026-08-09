@@ -12,12 +12,14 @@ use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use App\Notifications\OrderPlacedNotification;
 use App\Notifications\OrderStatusChangedNotification;
 use App\Notifications\PaymentConfirmedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Number;
 use Tests\TestCase;
 
 class TransactionalNotificationTest extends TestCase
@@ -60,6 +62,29 @@ class TransactionalNotificationTest extends TestCase
         );
     }
 
+    public function test_order_confirmation_uses_configured_store_currency(): void
+    {
+        StoreSetting::query()->create([
+            'store_name' => 'USD Test Store',
+            'currency' => 'USD',
+            'default_shipping_fee' => 0,
+        ]);
+
+        $order = $this->createOrder();
+
+        $message = (new OrderPlacedNotification(
+            $order,
+        ))->toMail($order);
+
+        $this->assertContains(
+            'Order total: '.Number::currency(
+                $order->grand_total / 100,
+                in: 'USD',
+            ),
+            $message->introLines,
+        );
+    }
+
     public function test_marking_payment_paid_sends_confirmation_once(): void
     {
         Notification::fake();
@@ -91,6 +116,37 @@ class TransactionalNotificationTest extends TestCase
         Notification::assertSentOnDemandTimes(
             PaymentConfirmedNotification::class,
             1,
+        );
+    }
+
+    public function test_payment_confirmation_uses_configured_store_currency(): void
+    {
+        StoreSetting::query()->create([
+            'store_name' => 'USD Test Store',
+            'currency' => 'USD',
+            'default_shipping_fee' => 0,
+        ]);
+
+        $order = $this->createOrder();
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Paid,
+            'amount' => $order->grand_total,
+            'reference' => 'BANK-123',
+            'paid_at' => now(),
+        ]);
+
+        $message = (new PaymentConfirmedNotification(
+            $payment,
+        ))->toMail($payment);
+
+        $this->assertContains(
+            'Amount received: '.Number::currency(
+                $payment->amount / 100,
+                in: 'USD',
+            ),
+            $message->introLines,
         );
     }
 

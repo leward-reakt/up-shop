@@ -3,8 +3,10 @@
 namespace App\Notifications;
 
 use App\Models\Order;
+use App\Models\StoreSetting;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Number;
 
 class OrderPlacedNotification extends Notification
 {
@@ -63,9 +65,9 @@ class OrderPlacedNotification extends Notification
 
     private function money(int $amount): string
     {
-        return '₱'.number_format(
+        return Number::currency(
             $amount / 100,
-            2,
+            in: StoreSetting::currentCurrency(),
         );
     }
 }

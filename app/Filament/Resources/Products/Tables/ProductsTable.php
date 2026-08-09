@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Products\Tables;
 
 use App\Actions\Inventory\AdjustInventory;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -28,6 +29,8 @@ class ProductsTable
 {
     public static function configure(Table $table): Table
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $table
             ->columns([
                 TextColumn::make('name')
@@ -43,7 +46,10 @@ class ProductsTable
                     ->sortable(),
 
                 TextColumn::make('price')
-                    ->money('PHP', divideBy: 100)
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    )
                     ->sortable(),
 
                 TextColumn::make('stock_quantity')
