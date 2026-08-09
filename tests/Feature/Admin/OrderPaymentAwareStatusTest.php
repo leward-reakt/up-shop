@@ -74,13 +74,30 @@ class OrderPaymentAwareStatusTest extends TestCase
             status: OrderStatus::Processing,
         );
 
+        $order->refresh();
+
         $this->assertSame(
             OrderStatus::Processing,
+            $order->order_status,
+        );
+
+        $this->assertSame(
+            [OrderStatus::Shipped],
+            UpdateOrderStatus::allowedNextStatuses($order),
+        );
+
+        app(UpdateOrderStatus::class)->handle(
+            order: $order,
+            status: OrderStatus::Shipped,
+        );
+
+        $this->assertSame(
+            OrderStatus::Shipped,
             $order->fresh()->order_status,
         );
     }
 
-    public function test_cash_on_delivery_can_enter_processing_while_payment_is_pending(): void
+    public function test_cash_on_delivery_can_continue_fulfillment_while_payment_is_pending(): void
     {
         $order = $this->createOrder([
             'payment_method' => PaymentMethod::CashOnDelivery,
@@ -98,10 +115,115 @@ class OrderPaymentAwareStatusTest extends TestCase
             status: OrderStatus::Processing,
         );
 
+        $order->refresh();
+
         $this->assertSame(
             OrderStatus::Processing,
-            $order->fresh()->order_status,
+            $order->order_status,
         );
+
+        $this->assertSame(
+            PaymentStatus::Pending,
+            $order->payment_status,
+        );
+
+        $this->assertSame(
+            [OrderStatus::Shipped],
+            UpdateOrderStatus::allowedNextStatuses($order),
+        );
+
+        app(UpdateOrderStatus::class)->handle(
+            order: $order,
+            status: OrderStatus::Shipped,
+        );
+
+        $order->refresh();
+
+        $this->assertSame(
+            OrderStatus::Shipped,
+            $order->order_status,
+        );
+
+        $this->assertSame(
+            PaymentStatus::Pending,
+            $order->payment_status,
+        );
+    }
+
+    public function test_failed_cancelled_or_refunded_payment_cannot_continue_fulfillment_from_processing(): void
+    {
+        $paymentScenarios = [
+            [
+                PaymentStatus::Failed,
+                PaymentMethod::CashOnDelivery,
+            ],
+            [
+                PaymentStatus::Cancelled,
+                PaymentMethod::CashOnDelivery,
+            ],
+            [
+                PaymentStatus::Refunded,
+                PaymentMethod::BankTransfer,
+            ],
+        ];
+
+        $fulfillmentTargets = [
+            [
+                ShippingMethod::FlatRate,
+                OrderStatus::Shipped,
+            ],
+            [
+                ShippingMethod::StorePickup,
+                OrderStatus::ReadyForPickup,
+            ],
+        ];
+
+        foreach (
+            $paymentScenarios as [
+                $paymentStatus,
+                $paymentMethod,
+            ]
+        ) {
+            foreach (
+                $fulfillmentTargets as [
+                    $shippingMethod,
+                    $nextStatus,
+                ]
+            ) {
+                $order = $this->createOrder([
+                    'payment_method' => $paymentMethod,
+                    'payment_status' => $paymentStatus,
+                    'shipping_method' => $shippingMethod,
+                    'order_status' => OrderStatus::Processing,
+                ]);
+
+                $this->assertSame(
+                    [],
+                    UpdateOrderStatus::allowedNextStatuses($order),
+                );
+
+                try {
+                    app(UpdateOrderStatus::class)->handle(
+                        order: $order,
+                        status: $nextStatus,
+                    );
+
+                    $this->fail(
+                        "Expected {$paymentStatus->value} payment to block {$nextStatus->value}.",
+                    );
+                } catch (ValidationException $exception) {
+                    $this->assertArrayHasKey(
+                        'order_status',
+                        $exception->errors(),
+                    );
+                }
+
+                $this->assertSame(
+                    OrderStatus::Processing,
+                    $order->fresh()->order_status,
+                );
+            }
+        }
     }
 
     public function test_unpaid_order_cannot_be_completed(): void

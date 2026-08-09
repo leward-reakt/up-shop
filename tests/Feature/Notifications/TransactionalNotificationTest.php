@@ -203,6 +203,7 @@ class TransactionalNotificationTest extends TestCase
 
         $order = $this->createOrder([
             'order_status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Paid,
             'shipping_method' => ShippingMethod::FlatRate,
         ]);
 

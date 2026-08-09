@@ -402,11 +402,13 @@ class OrderWorkflowEdgeCaseTest extends TestCase
     public function test_processing_status_respects_shipping_method(): void
     {
         $deliveryOrder = $this->createOrder([
+            'payment_status' => PaymentStatus::Paid,
             'order_status' => OrderStatus::Processing,
             'shipping_method' => ShippingMethod::FlatRate,
         ]);
 
         $pickupOrder = $this->createOrder([
+            'payment_status' => PaymentStatus::Paid,
             'order_status' => OrderStatus::Processing,
             'shipping_method' => ShippingMethod::StorePickup,
         ]);

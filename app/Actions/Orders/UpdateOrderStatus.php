@@ -84,17 +84,21 @@ class UpdateOrderStatus
                 OrderStatus::Confirmed,
             ],
 
-            OrderStatus::Confirmed => self::canEnterProcessing(
+            OrderStatus::Confirmed => self::canContinueFulfillment(
                 $order,
             )
                 ? [OrderStatus::Processing]
                 : [],
 
-            OrderStatus::Processing => [
-                $order->shipping_method === ShippingMethod::StorePickup
-                    ? OrderStatus::ReadyForPickup
-                    : OrderStatus::Shipped,
-            ],
+            OrderStatus::Processing => self::canContinueFulfillment(
+                $order,
+            )
+                ? [
+                    $order->shipping_method === ShippingMethod::StorePickup
+                        ? OrderStatus::ReadyForPickup
+                        : OrderStatus::Shipped,
+                ]
+                : [],
 
             OrderStatus::ReadyForPickup,
             OrderStatus::Shipped => $order->payment_status === PaymentStatus::Paid
@@ -106,13 +110,14 @@ class UpdateOrderStatus
         };
     }
 
-    private static function canEnterProcessing(
+    private static function canContinueFulfillment(
         Order $order,
     ): bool {
         if ($order->payment_status === PaymentStatus::Paid) {
             return true;
         }
 
+        // COD remains pending while fulfillment proceeds until cash is collected.
         return $order->payment_method === PaymentMethod::CashOnDelivery
             && $order->payment_status === PaymentStatus::Pending;
     }
