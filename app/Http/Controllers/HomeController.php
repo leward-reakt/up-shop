@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\LandingPageTheme;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StoreSetting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -15,12 +13,6 @@ class HomeController extends Controller
 {
     public function __invoke(): Response
     {
-        $settings = StoreSetting::query()->first();
-
-        $theme = LandingPageTheme::tryFrom(
-            (string) ($settings->landing_page_theme ?? ''),
-        ) ?? LandingPageTheme::Default;
-
         $featuredProducts = $this->serializeProducts(
             $this->publicProductQuery()
                 ->where('is_featured', true)
@@ -28,31 +20,21 @@ class HomeController extends Controller
             8,
         );
 
-        if ($theme === LandingPageTheme::FashionEditorial) {
-            return Inertia::render('home', [
-                'theme' => $theme->value,
-                'featuredProducts' => $featuredProducts,
-
-                'newArrivals' => $this->serializeProducts(
-                    $this->publicProductQuery()
-                        ->latest(),
-                    6,
-                ),
-
-                'categories' => $this->landingCategories(),
-            ]);
-        }
-
         return Inertia::render('home', [
-            'theme' => LandingPageTheme::Default->value,
             'featuredProducts' => $featuredProducts,
-            'newArrivals' => [],
-            'categories' => [],
+
+            'newArrivals' => $this->serializeProducts(
+                $this->publicProductQuery()
+                    ->latest(),
+                6,
+            ),
+
+            'categories' => $this->landingCategories(),
         ]);
     }
 
     /**
-     * Keep public-product visibility consistent across all landing themes.
+     * Keep public-product visibility consistent across the storefront.
      *
      * @return Builder<Product>
      */

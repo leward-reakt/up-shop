@@ -31,12 +31,11 @@ class StoreSettingForm
                 Select::make('landing_page_theme')
                     ->label('Storefront theme')
                     ->options(LandingPageTheme::options())
-                    ->default(LandingPageTheme::Default->value)
+                    ->default(LandingPageTheme::FashionEditorial->value)
                     ->required()
                     ->helperText(
-                        'Controls the customer-facing design for supported '
-                        .'storefront pages, including home, catalog, cart, '
-                        .'checkout, account, and content pages.',
+                        'Fashion Elegant is the active customer-facing '
+                        .'storefront theme.',
                     ),
 
                 TextInput::make('store_email')

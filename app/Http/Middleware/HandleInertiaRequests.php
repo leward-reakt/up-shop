@@ -114,7 +114,7 @@ class HandleInertiaRequests extends Middleware
 
         $theme = LandingPageTheme::tryFrom(
             (string) ($settings->landing_page_theme ?? ''),
-        ) ?? LandingPageTheme::Default;
+        ) ?? LandingPageTheme::FashionEditorial;
 
         return [
             'name' => $settings?->store_name
@@ -130,25 +130,17 @@ class HandleInertiaRequests extends Middleware
 
             'theme' => $theme->value,
 
-            'navigation_categories' => $this->navigationCategories(
-                $theme,
-            ),
+            'navigation_categories' => $this->navigationCategories(),
         ];
     }
 
     /**
-     * Keep Fashion Elegant navigation consistent across themed storefront
-     * pages without introducing category-specific theme configuration.
+     * Keep Fashion Elegant navigation consistent across storefront pages.
      *
      * @return array<int, array{id: int, name: string, slug: string}>
      */
-    private function navigationCategories(
-        LandingPageTheme $theme,
-    ): array {
-        if ($theme !== LandingPageTheme::FashionEditorial) {
-            return [];
-        }
-
+    private function navigationCategories(): array
+    {
         return Category::query()
             ->where('is_active', true)
             ->whereHas(

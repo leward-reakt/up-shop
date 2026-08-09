@@ -14,27 +14,17 @@ class LandingPageThemeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_default_theme_keeps_existing_home_page(): void
+    public function test_store_settings_database_default_is_fashion_elegant(): void
     {
-        $this->createStoreSettings();
+        $settings = $this->createStoreSettings();
 
-        $this
-            ->get('/')
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page): Assert => $page
-                    ->component('home')
-                    ->where(
-                        'theme',
-                        LandingPageTheme::Default->value,
-                    )
-                    ->has('featuredProducts')
-                    ->has('categories', 0)
-                    ->has('newArrivals', 0),
-            );
+        $this->assertSame(
+            LandingPageTheme::FashionEditorial->value,
+            $settings->refresh()->landing_page_theme,
+        );
     }
 
-    public function test_fashion_editorial_theme_receives_landing_catalog_data(): void
+    public function test_home_receives_fashion_elegant_landing_catalog_data(): void
     {
         $category = Category::factory()->create([
             'name' => 'Bags',
@@ -45,15 +35,13 @@ class LandingPageThemeTest extends TestCase
         $product = Product::factory()
             ->for($category)
             ->create([
-                'name' => 'Editorial Bag',
+                'name' => 'Elegant Bag',
                 'is_active' => true,
                 'is_featured' => true,
                 'stock_quantity' => 10,
             ]);
 
-        $this->createStoreSettings(
-            LandingPageTheme::FashionEditorial->value,
-        );
+        $this->createStoreSettings();
 
         $this
             ->get('/')
@@ -61,10 +49,6 @@ class LandingPageThemeTest extends TestCase
             ->assertInertia(
                 fn (Assert $page): Assert => $page
                     ->component('home')
-                    ->where(
-                        'theme',
-                        LandingPageTheme::FashionEditorial->value,
-                    )
                     ->has('categories', 1)
                     ->where(
                         'categories.0.id',
@@ -94,9 +78,7 @@ class LandingPageThemeTest extends TestCase
                 'stock_quantity' => 10,
             ]);
 
-        $this->createStoreSettings(
-            LandingPageTheme::FashionEditorial->value,
-        );
+        $this->createStoreSettings();
 
         $this
             ->get('/cart')
@@ -139,9 +121,7 @@ class LandingPageThemeTest extends TestCase
                 'stock_quantity' => 10,
             ]);
 
-        $this->createStoreSettings(
-            LandingPageTheme::FashionEditorial->value,
-        );
+        $this->createStoreSettings();
 
         $this
             ->withSession([
@@ -175,9 +155,26 @@ class LandingPageThemeTest extends TestCase
             );
     }
 
-    public function test_default_theme_does_not_share_fashion_navigation_categories(): void
+    public function test_missing_store_settings_fall_back_to_fashion_elegant(): void
+    {
+        $this
+            ->get('/cart')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('cart/index')
+                    ->where(
+                        'store.theme',
+                        LandingPageTheme::FashionEditorial->value,
+                    ),
+            );
+    }
+
+    public function test_invalid_theme_value_falls_back_to_fashion_elegant(): void
     {
         $category = Category::factory()->create([
+            'name' => 'Accessories',
+            'slug' => 'accessories',
             'is_active' => true,
         ]);
 
@@ -188,41 +185,9 @@ class LandingPageThemeTest extends TestCase
                 'stock_quantity' => 10,
             ]);
 
-        $this->createStoreSettings(
-            LandingPageTheme::Default->value,
-        );
-
-        $this
-            ->get('/cart')
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page): Assert => $page
-                    ->component('cart/index')
-                    ->where(
-                        'store.theme',
-                        LandingPageTheme::Default->value,
-                    )
-                    ->has('store.navigation_categories', 0),
-            );
-    }
-
-    public function test_invalid_theme_value_falls_back_to_default(): void
-    {
         $this->createStoreSettings('unknown_theme');
 
         $this
-            ->get('/')
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page): Assert => $page
-                    ->component('home')
-                    ->where(
-                        'theme',
-                        LandingPageTheme::Default->value,
-                    ),
-            );
-
-        $this
             ->get('/cart')
             ->assertOk()
             ->assertInertia(
@@ -230,8 +195,9 @@ class LandingPageThemeTest extends TestCase
                     ->component('cart/index')
                     ->where(
                         'store.theme',
-                        LandingPageTheme::Default->value,
-                    ),
+                        LandingPageTheme::FashionEditorial->value,
+                    )
+                    ->has('store.navigation_categories', 1),
             );
     }
 

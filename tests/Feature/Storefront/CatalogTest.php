@@ -53,7 +53,7 @@ class CatalogTest extends TestCase
                     ->component('shop/index')
                     ->where(
                         'theme',
-                        LandingPageTheme::Default->value,
+                        LandingPageTheme::FashionEditorial->value,
                     )
                     ->has('products.data', 1)
                     ->where(
@@ -144,7 +144,7 @@ class CatalogTest extends TestCase
                     ->component('shop/show')
                     ->where(
                         'theme',
-                        LandingPageTheme::Default->value,
+                        LandingPageTheme::FashionEditorial->value,
                     )
                     ->where('product.id', $product->id)
                     ->where('product.name', 'Test Product')
@@ -239,7 +239,7 @@ class CatalogTest extends TestCase
             );
     }
 
-    public function test_invalid_shop_theme_falls_back_to_default(): void
+    public function test_invalid_shop_theme_falls_back_to_fashion_elegant(): void
     {
         $this->createStoreSettings('invalid-theme');
 
@@ -251,7 +251,7 @@ class CatalogTest extends TestCase
                     ->component('shop/index')
                     ->where(
                         'theme',
-                        LandingPageTheme::Default->value,
+                        LandingPageTheme::FashionEditorial->value,
                     ),
             );
     }

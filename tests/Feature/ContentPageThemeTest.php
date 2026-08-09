@@ -52,12 +52,8 @@ class ContentPageThemeTest extends TestCase
         }
     }
 
-    public function test_content_pages_keep_default_theme_when_default_is_selected(): void
+    public function test_content_pages_default_to_fashion_elegant_when_store_settings_are_missing(): void
     {
-        $this->createStoreSettings(
-            LandingPageTheme::Default,
-        );
-
         Page::query()->create([
             'title' => 'About',
             'slug' => 'about',
@@ -80,7 +76,7 @@ class ContentPageThemeTest extends TestCase
                     ->where('contentPage.slug', 'about')
                     ->where(
                         'store.theme',
-                        LandingPageTheme::Default->value,
+                        LandingPageTheme::FashionEditorial->value,
                     ),
             );
     }

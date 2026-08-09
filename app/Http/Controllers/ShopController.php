@@ -219,7 +219,7 @@ class ShopController extends Controller
 
         return LandingPageTheme::tryFrom(
             (string) ($settings->landing_page_theme ?? ''),
-        ) ?? LandingPageTheme::Default;
+        ) ?? LandingPageTheme::FashionEditorial;
     }
 
     /**
