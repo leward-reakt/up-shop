@@ -71,7 +71,9 @@ Route::get(
 Route::post(
     '/checkout',
     [CheckoutController::class, 'store'],
-)->name('checkout.store');
+)
+    ->middleware('throttle:checkout')
+    ->name('checkout.store');
 
 Route::get(
     '/checkout/success',
