@@ -129,7 +129,8 @@ test('product can move through cart to checkout in the browser', async ({
     ).toBeVisible();
 
     await expect(
-        page.getByText(product.name, {
+        page.getByRole('link', {
+            name: product.name,
             exact: true,
         }),
     ).toBeVisible();
@@ -178,7 +179,11 @@ test('customer can sign in and navigate the account area', async ({ page }) => {
 
     await page.getByLabel('Email address').fill('customer@example.com');
 
-    await page.getByLabel('Password').fill('password');
+    await page
+        .getByLabel('Password', {
+            exact: true,
+        })
+        .fill('password');
 
     await page
         .getByRole('button', {
