@@ -166,5 +166,3 @@ Include manual UI verification when the feature affects customer or admin workfl
 When uncertain, choose the simpler implementation.
 
 Do not build functionality because it might be useful later.
-
-Implement only what the approved MVP currently requires.
