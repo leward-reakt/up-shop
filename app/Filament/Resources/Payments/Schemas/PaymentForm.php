@@ -10,6 +10,7 @@ use App\Models\StoreSetting;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class PaymentForm
@@ -104,7 +105,8 @@ class PaymentForm
                                 ->all();
                         },
                     )
-                    ->required(),
+                    ->required()
+                    ->live(),
 
                 TextInput::make('reference')
                     ->placeholder(
@@ -120,6 +122,28 @@ class PaymentForm
                             default => 'Optional',
                         },
                     )
+                    ->required(
+                        fn (
+                            Get $get,
+                            string $operation,
+                            ?Payment $record,
+                        ): bool => (
+                            $operation !== 'view'
+                            && $record?->method
+                                === PaymentMethod::BankTransfer
+                            && in_array(
+                                $get('status'),
+                                [
+                                    PaymentStatus::Paid,
+                                    PaymentStatus::Paid->value,
+                                ],
+                                true,
+                            )
+                        ),
+                    )
+                    ->validationMessages([
+                        'required' => 'A payment reference is required when marking a bank transfer as paid.',
+                    ])
                     ->maxLength(255),
 
                 Textarea::make('notes')

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payments;
 
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
@@ -47,6 +48,24 @@ class UpdatePaymentStatus
                     }
                 }
 
+                $normalizedReference = $this->nullableString(
+                    $reference,
+                );
+
+                $normalizedNotes = $this->nullableString(
+                    $notes,
+                );
+
+                if (
+                    $lockedPayment->method === PaymentMethod::BankTransfer
+                    && $status === PaymentStatus::Paid
+                    && $normalizedReference === null
+                ) {
+                    throw ValidationException::withMessages([
+                        'reference' => 'A payment reference is required when marking a bank transfer as paid.',
+                    ]);
+                }
+
                 $becamePaid = (
                     $statusChanged
                     && $status === PaymentStatus::Paid
@@ -76,12 +95,8 @@ class UpdatePaymentStatus
 
                 $lockedPayment->update([
                     'status' => $status,
-                    'reference' => $this->nullableString(
-                        $reference,
-                    ),
-                    'notes' => $this->nullableString(
-                        $notes,
-                    ),
+                    'reference' => $normalizedReference,
+                    'notes' => $normalizedNotes,
                     'paid_at' => $paidAt,
                 ]);
 

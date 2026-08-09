@@ -237,7 +237,7 @@ class AdminOperationsTest extends TestCase
         }
     }
 
-    public function test_payment_update_keeps_order_payment_status_in_sync(): void
+    public function test_bank_transfer_can_be_marked_paid_with_reference_and_keeps_order_in_sync(): void
     {
         $order = $this->createOrder();
 
@@ -257,6 +257,96 @@ class AdminOperationsTest extends TestCase
         $this->assertSame(
             PaymentStatus::Paid,
             $payment->fresh()->status,
+        );
+
+        $this->assertSame(
+            'BANK-123',
+            $payment->fresh()->reference,
+        );
+
+        $this->assertNotNull(
+            $payment->fresh()->paid_at,
+        );
+
+        $this->assertSame(
+            PaymentStatus::Paid,
+            $order->fresh()->payment_status,
+        );
+    }
+
+    public function test_bank_transfer_cannot_be_marked_paid_without_reference(): void
+    {
+        $order = $this->createOrder();
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Pending,
+            'amount' => $order->grand_total,
+        ]);
+
+        foreach ([null, '', '   '] as $missingReference) {
+            try {
+                app(UpdatePaymentStatus::class)->handle(
+                    payment: $payment,
+                    status: PaymentStatus::Paid,
+                    reference: $missingReference,
+                    notes: 'Verified manually.',
+                );
+
+                $this->fail(
+                    'Expected a validation exception.',
+                );
+            } catch (ValidationException $exception) {
+                $this->assertSame(
+                    [
+                        'A payment reference is required when marking a bank transfer as paid.',
+                    ],
+                    $exception->errors()['reference'] ?? [],
+                );
+            }
+
+            $this->assertSame(
+                PaymentStatus::Pending,
+                $payment->fresh()->status,
+            );
+
+            $this->assertNull(
+                $payment->fresh()->paid_at,
+            );
+
+            $this->assertSame(
+                PaymentStatus::Pending,
+                $order->fresh()->payment_status,
+            );
+        }
+    }
+
+    public function test_cash_on_delivery_can_be_marked_paid_without_reference(): void
+    {
+        $order = $this->createOrder([
+            'payment_method' => PaymentMethod::CashOnDelivery,
+        ]);
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::CashOnDelivery,
+            'status' => PaymentStatus::Pending,
+            'amount' => $order->grand_total,
+        ]);
+
+        app(UpdatePaymentStatus::class)->handle(
+            payment: $payment,
+            status: PaymentStatus::Paid,
+            reference: null,
+            notes: 'Cash collected.',
+        );
+
+        $this->assertSame(
+            PaymentStatus::Paid,
+            $payment->fresh()->status,
+        );
+
+        $this->assertNull(
+            $payment->fresh()->reference,
         );
 
         $this->assertNotNull(
