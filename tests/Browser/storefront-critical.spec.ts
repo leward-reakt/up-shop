@@ -28,7 +28,11 @@ test('primary navigation and shop work at the configured viewport', async ({
 
     await expectNoHorizontalOverflow(page);
 
-    if (testInfo.project.name === 'mobile-chromium') {
+    const usesCompactNavigation =
+        testInfo.project.name === 'mobile-chromium' ||
+        testInfo.project.name === 'tablet-chromium';
+
+    if (usesCompactNavigation) {
         const menuToggle = page.getByLabel('Open navigation');
 
         await expect(menuToggle).toBeVisible();
@@ -234,6 +238,57 @@ test('customer can sign in and navigate the account area', async ({ page }) => {
     await expect(
         page.getByRole('heading', {
             name: 'Your orders.',
+        }),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+});
+
+test('Filament products table renders at the tablet viewport', async ({
+    page,
+}, testInfo) => {
+    test.skip(
+        testInfo.project.name !== 'tablet-chromium',
+        'Filament responsive smoke coverage only needs the tablet viewport.',
+    );
+
+    await page.goto('/admin/login');
+
+    await page
+        .getByLabel('Email address', {
+            exact: true,
+        })
+        .fill('admin@example.com');
+
+    await page
+        .getByLabel('Password', {
+            exact: true,
+        })
+        .fill('password');
+
+    await page
+        .getByRole('button', {
+            name: 'Sign in',
+            exact: true,
+        })
+        .click();
+
+    await expect(page).toHaveURL(/\/admin\/?$/);
+
+    await page.goto('/admin/products');
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Products',
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await expect(page.getByRole('table')).toBeVisible();
+
+    await expect(
+        page.getByText(product.name, {
+            exact: true,
         }),
     ).toBeVisible();
 
