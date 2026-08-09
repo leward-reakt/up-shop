@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\LandingPageTheme;
 use App\Models\Category;
 use App\Models\StoreSetting;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +54,10 @@ class HandleInertiaRequests extends Middleware
                 'guest_has_items' => fn (): bool => $this->guestCartHasItems(
                     $request,
                 ),
+
+                'product_count' => fn (): int => $this->cartProductCount(
+                    $request,
+                ),
             ],
 
             'store' => fn (): array => $this->storeData(),
@@ -73,19 +78,39 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
+    private function cartProductCount(Request $request): int
+    {
+        $user = $request->user();
+
+        if ($user instanceof User) {
+            $cart = $user->cart()->first();
+
+            return $cart?->items()->count() ?? 0;
+        }
+
+        return $this->guestCartProductCount($request);
+    }
+
     private function guestCartHasItems(Request $request): bool
     {
         if ($request->user() !== null) {
             return false;
         }
 
+        return $this->guestCartProductCount($request) > 0;
+    }
+
+    private function guestCartProductCount(Request $request): int
+    {
         $storedItems = $request
             ->session()
             ->get('cart.items', []);
 
         if (! is_array($storedItems)) {
-            return false;
+            return 0;
         }
+
+        $productCount = 0;
 
         foreach ($storedItems as $productId => $quantity) {
             if (
@@ -94,11 +119,11 @@ class HandleInertiaRequests extends Middleware
                 && (int) $productId > 0
                 && (int) $quantity > 0
             ) {
-                return true;
+                $productCount++;
             }
         }
 
-        return false;
+        return $productCount;
     }
 
     /**

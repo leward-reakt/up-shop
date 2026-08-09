@@ -23,6 +23,7 @@ type StorefrontSharedProps = {
 
     cart?: {
         guest_has_items?: boolean;
+        product_count?: number;
     };
 
     store?: {
@@ -51,6 +52,12 @@ export default function StorefrontLayout({
     const auth = props.auth;
 
     const storeName = props.store?.name || 'Up Shop';
+
+    const cartProductCount = props.cart?.product_count ?? 0;
+
+    const cartAriaLabel = `Shopping cart, ${cartProductCount} ${
+        cartProductCount === 1 ? 'product' : 'products'
+    }`;
 
     const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
@@ -169,14 +176,23 @@ export default function StorefrontLayout({
 
                                 <Link
                                     href="/cart"
-                                    aria-label="Shopping cart"
-                                    className="transition-opacity hover:opacity-60"
+                                    aria-label={cartAriaLabel}
+                                    className="relative transition-opacity hover:opacity-60"
                                 >
                                     <ShoppingBag
                                         aria-hidden="true"
                                         className="size-5"
                                         strokeWidth={1.5}
                                     />
+
+                                    {cartProductCount > 0 && (
+                                        <span
+                                            aria-hidden="true"
+                                            className="absolute -top-2 -right-2 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-neutral-950 px-1 text-[9px] leading-none font-medium text-white"
+                                        >
+                                            {cartProductCount}
+                                        </span>
+                                    )}
                                 </Link>
 
                                 <details className="relative xl:hidden">
@@ -260,9 +276,18 @@ export default function StorefrontLayout({
 
                             <Link
                                 href="/cart"
-                                className="hover:text-neutral-600"
+                                aria-label={cartAriaLabel}
+                                className="inline-flex items-center gap-1.5 hover:text-neutral-600"
                             >
                                 Cart
+                                {cartProductCount > 0 && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-neutral-950 px-1.5 text-[10px] leading-none font-medium text-white"
+                                    >
+                                        {cartProductCount}
+                                    </span>
+                                )}
                             </Link>
 
                             {auth?.user ? (
@@ -315,9 +340,18 @@ export default function StorefrontLayout({
 
                                 <Link
                                     href="/cart"
-                                    className="rounded-lg px-3 py-2 hover:bg-neutral-100"
+                                    aria-label={cartAriaLabel}
+                                    className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-neutral-100"
                                 >
                                     Cart
+                                    {cartProductCount > 0 && (
+                                        <span
+                                            aria-hidden="true"
+                                            className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-neutral-950 px-1.5 text-[10px] leading-none font-medium text-white"
+                                        >
+                                            {cartProductCount}
+                                        </span>
+                                    )}
                                 </Link>
 
                                 {auth?.user ? (
