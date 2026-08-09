@@ -28,6 +28,7 @@ type CheckoutProps = {
     totals: CheckoutTotals;
     shipping_options: CheckoutOption[];
     payment_options: CheckoutOption[];
+    bank_transfer_instructions: string | null;
     selected_shipping_method: string;
     customer: CheckoutCustomer;
     is_authenticated: boolean;
@@ -46,6 +47,7 @@ export default function Checkout({
     totals,
     shipping_options,
     payment_options,
+    bank_transfer_instructions,
     selected_shipping_method,
     customer,
     is_authenticated,
@@ -762,18 +764,48 @@ export default function Checkout({
                                     })}
                                 </div>
 
-                                {data.payment_method === 'bank_transfer' && (
-                                    <p
-                                        className={
-                                            isFashionEditorial
-                                                ? 'mt-6 border-l border-neutral-300 pl-4 text-xs leading-6 text-neutral-600'
-                                                : 'mt-4 text-sm leading-6 text-neutral-600'
-                                        }
-                                    >
-                                        Your order will remain pending until the
-                                        bank transfer is manually verified.
-                                    </p>
-                                )}
+                                {data.payment_method === 'bank_transfer' &&
+                                    bank_transfer_instructions && (
+                                        <div
+                                            className={
+                                                isFashionEditorial
+                                                    ? 'mt-6 border-l border-neutral-300 pl-4'
+                                                    : 'mt-4 rounded-lg border bg-neutral-50 p-4'
+                                            }
+                                        >
+                                            <p
+                                                className={
+                                                    isFashionEditorial
+                                                        ? 'text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase'
+                                                        : 'text-sm font-medium'
+                                                }
+                                            >
+                                                Bank transfer instructions
+                                            </p>
+
+                                            <p
+                                                className={
+                                                    isFashionEditorial
+                                                        ? 'mt-3 text-xs leading-6 whitespace-pre-line text-neutral-700'
+                                                        : 'mt-2 text-sm leading-6 whitespace-pre-line text-neutral-700'
+                                                }
+                                            >
+                                                {bank_transfer_instructions}
+                                            </p>
+
+                                            <p
+                                                className={
+                                                    isFashionEditorial
+                                                        ? 'mt-4 text-xs leading-6 text-neutral-600'
+                                                        : 'mt-3 text-sm leading-6 text-neutral-600'
+                                                }
+                                            >
+                                                Your order will remain pending
+                                                until the bank transfer is
+                                                manually verified.
+                                            </p>
+                                        </div>
+                                    )}
 
                                 <InputError
                                     message={errors.payment_method}

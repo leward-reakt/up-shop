@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\StoreSetting;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -47,6 +48,29 @@ class OrderPlacedNotification extends Notification
                 'Payment status: '
                 .$this->order->payment_status->label(),
             );
+
+        if (
+            $this->order->payment_method
+            === PaymentMethod::BankTransfer
+        ) {
+            $instructions =
+                StoreSetting::currentBankTransferInstructions();
+
+            if ($instructions !== null) {
+                $message
+                    ->line('Bank transfer instructions:')
+                    ->line($instructions)
+                    ->line(
+                        'Your payment will remain pending until '
+                        .'the transfer is manually verified.',
+                    );
+            } else {
+                $message->line(
+                    'Bank transfer instructions are currently unavailable. '
+                    .'Please contact the store before sending payment.',
+                );
+            }
+        }
 
         if ($this->order->user_id !== null) {
             $message->action(

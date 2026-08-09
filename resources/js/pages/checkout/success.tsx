@@ -5,6 +5,7 @@ import type { CatalogCategory, CheckoutOrder } from '@/types';
 
 type CheckoutSuccessProps = {
     order: CheckoutOrder;
+    bank_transfer_instructions: string | null;
 };
 
 type CheckoutSuccessSharedProps = {
@@ -14,7 +15,10 @@ type CheckoutSuccessSharedProps = {
     };
 };
 
-export default function CheckoutSuccess({ order }: CheckoutSuccessProps) {
+export default function CheckoutSuccess({
+    order,
+    bank_transfer_instructions,
+}: CheckoutSuccessProps) {
     const page = usePage();
 
     const sharedProps = page.props as unknown as CheckoutSuccessSharedProps;
@@ -106,13 +110,31 @@ export default function CheckoutSuccess({ order }: CheckoutSuccessProps) {
                                             Bank transfer
                                         </h2>
 
-                                        <p className="mt-3 max-w-xl text-sm leading-7 text-neutral-600">
-                                            Your payment is pending manual bank
-                                            transfer verification. Store payment
-                                            instructions can be provided
-                                            separately once configured by the
-                                            administrator.
-                                        </p>
+                                        {bank_transfer_instructions ? (
+                                            <>
+                                                <p className="mt-3 max-w-xl text-sm leading-7 text-neutral-600">
+                                                    Complete your payment using
+                                                    the instructions below.
+                                                </p>
+
+                                                <p className="mt-4 max-w-xl border-l border-neutral-300 pl-4 text-sm leading-7 whitespace-pre-line text-neutral-700">
+                                                    {bank_transfer_instructions}
+                                                </p>
+
+                                                <p className="mt-4 max-w-xl text-sm leading-7 text-neutral-600">
+                                                    Your payment will remain
+                                                    pending until the transfer
+                                                    is manually verified.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="mt-3 max-w-xl text-sm leading-7 text-neutral-600">
+                                                Bank transfer instructions are
+                                                currently unavailable. Contact
+                                                the store before sending
+                                                payment.
+                                            </p>
+                                        )}
                                     </section>
                                 )}
 
@@ -443,12 +465,29 @@ export default function CheckoutSuccess({ order }: CheckoutSuccessProps) {
                         <div className="my-6 rounded-lg border bg-neutral-50 p-4">
                             <h2 className="font-medium">Bank transfer</h2>
 
-                            <p className="mt-2 text-sm leading-6 text-neutral-600">
-                                Your payment is pending manual bank transfer
-                                verification. Store payment instructions can be
-                                provided separately once configured by the
-                                administrator.
-                            </p>
+                            {bank_transfer_instructions ? (
+                                <>
+                                    <p className="mt-2 text-sm leading-6 text-neutral-600">
+                                        Complete your payment using the
+                                        instructions below.
+                                    </p>
+
+                                    <p className="mt-3 border-l pl-4 text-sm leading-6 whitespace-pre-line text-neutral-700">
+                                        {bank_transfer_instructions}
+                                    </p>
+
+                                    <p className="mt-3 text-sm leading-6 text-neutral-600">
+                                        Your payment will remain pending until
+                                        the transfer is manually verified.
+                                    </p>
+                                </>
+                            ) : (
+                                <p className="mt-2 text-sm leading-6 text-neutral-600">
+                                    Bank transfer instructions are currently
+                                    unavailable. Contact the store before
+                                    sending payment.
+                                </p>
+                            )}
                         </div>
                     )}
 

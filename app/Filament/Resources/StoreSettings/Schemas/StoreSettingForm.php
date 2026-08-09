@@ -65,6 +65,18 @@ class StoreSettingForm
                     ->rows(3)
                     ->columnSpanFull(),
 
+                Textarea::make('bank_transfer_instructions')
+                    ->label('Bank transfer instructions')
+                    ->rows(7)
+                    ->maxLength(5000)
+                    ->helperText(
+                        'Bank Transfer is available at checkout only when '
+                        .'these instructions are configured. Include the '
+                        .'bank name, account name, account number, and any '
+                        .'customer payment instructions required by the store.',
+                    )
+                    ->columnSpanFull(),
+
                 TextInput::make('currency')
                     ->required()
                     ->default(StoreSetting::DEFAULT_CURRENCY)

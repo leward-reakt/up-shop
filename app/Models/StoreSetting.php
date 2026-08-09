@@ -15,6 +15,7 @@ class StoreSetting extends Model
         'store_email',
         'contact_number',
         'business_address',
+        'bank_transfer_instructions',
         'currency',
         'default_shipping_fee',
         'free_shipping_threshold',
@@ -29,6 +30,25 @@ class StoreSetting extends Model
 
         return $settings?->currencyCode()
             ?? self::DEFAULT_CURRENCY;
+    }
+
+    public static function currentBankTransferInstructions(): ?string
+    {
+        $settings = static::query()->first();
+
+        $instructions = $settings?->getAttribute(
+            'bank_transfer_instructions',
+        );
+
+        if (! is_string($instructions)) {
+            return null;
+        }
+
+        $instructions = trim($instructions);
+
+        return $instructions === ''
+            ? null
+            : $instructions;
     }
 
     public static function normalizeCurrency(

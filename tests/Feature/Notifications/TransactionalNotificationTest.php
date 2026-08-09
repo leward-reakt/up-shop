@@ -176,6 +176,7 @@ class TransactionalNotificationTest extends TestCase
 
         $order = $this->createOrder([
             'order_status' => OrderStatus::Confirmed,
+            'payment_status' => PaymentStatus::Paid,
         ]);
 
         app(UpdateOrderStatus::class)->handle(
@@ -213,6 +214,7 @@ class TransactionalNotificationTest extends TestCase
 
         $order = $this->createOrder([
             'order_status' => OrderStatus::Shipped,
+            'payment_status' => PaymentStatus::Paid,
         ]);
 
         app(UpdateOrderStatus::class)->handle(

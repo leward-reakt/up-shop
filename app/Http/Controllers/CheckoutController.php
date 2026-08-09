@@ -10,6 +10,7 @@ use App\Http\Requests\CheckoutRequest;
 use App\Models\Address;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -91,6 +92,23 @@ class CheckoutController extends Controller
                 ->values()
                 ->all();
 
+        $bankTransferInstructions =
+            StoreSetting::currentBankTransferInstructions();
+
+        $paymentOptions = [
+            [
+                'value' => PaymentMethod::CashOnDelivery->value,
+                'label' => PaymentMethod::CashOnDelivery->label(),
+            ],
+        ];
+
+        if ($bankTransferInstructions !== null) {
+            $paymentOptions[] = [
+                'value' => PaymentMethod::BankTransfer->value,
+                'label' => PaymentMethod::BankTransfer->label(),
+            ];
+        }
+
         return Inertia::render('checkout/index', [
             'items' => $items
                 ->map(
@@ -133,16 +151,9 @@ class CheckoutController extends Controller
                 ShippingMethod::cases(),
             ),
 
-            'payment_options' => [
-                [
-                    'value' => PaymentMethod::CashOnDelivery->value,
-                    'label' => 'Cash on Delivery',
-                ],
-                [
-                    'value' => PaymentMethod::BankTransfer->value,
-                    'label' => 'Bank Transfer',
-                ],
-            ],
+            'payment_options' => $paymentOptions,
+
+            'bank_transfer_instructions' => $bankTransferInstructions,
 
             'selected_shipping_method' => $shippingMethod->value,
 
@@ -219,7 +230,14 @@ class CheckoutController extends Controller
             abort(403);
         }
 
+        $bankTransferInstructions =
+            $order->payment_method === PaymentMethod::BankTransfer
+                ? StoreSetting::currentBankTransferInstructions()
+                : null;
+
         return Inertia::render('checkout/success', [
+            'bank_transfer_instructions' => $bankTransferInstructions,
+
             'order' => [
                 'order_number' => $order->order_number,
 

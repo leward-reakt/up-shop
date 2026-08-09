@@ -10,6 +10,7 @@ use App\Models\Address;
 use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use App\Notifications\OrderPlacedNotification;
 use Illuminate\Database\Eloquent\Builder;
@@ -119,6 +120,15 @@ class PlaceOrder
                 $paymentMethod = PaymentMethod::from(
                     (string) $data['payment_method'],
                 );
+
+                if (
+                    $paymentMethod === PaymentMethod::BankTransfer
+                    && StoreSetting::currentBankTransferInstructions() === null
+                ) {
+                    throw ValidationException::withMessages([
+                        'payment_method' => 'Bank Transfer is currently unavailable because payment instructions are not configured.',
+                    ]);
+                }
 
                 $totals = $this->calculateCheckoutTotals->handle(
                     items: $items,
