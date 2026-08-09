@@ -1,9 +1,10 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import FashionElegantProduct from '@/components/fashion-elegant-product';
 import { Price } from '@/components/price';
 import { QuantityInput } from '@/components/quantity-input';
+import { SeoHead } from '@/components/seo-head';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type { CatalogCategory, CatalogProductDetails } from '@/types';
 
@@ -18,13 +19,25 @@ export default function ProductShow({
     categories,
     product,
 }: ProductShowProps) {
-    if (theme === 'fashion_editorial') {
-        return (
-            <FashionElegantProduct product={product} categories={categories} />
-        );
-    }
+    return (
+        <>
+            <SeoHead
+                title={product.meta_title?.trim() || product.name}
+                description={product.meta_description}
+                canonicalPath={`/products/${product.slug}`}
+                image={product.image_url}
+            />
 
-    return <DefaultProductShow product={product} />;
+            {theme === 'fashion_editorial' ? (
+                <FashionElegantProduct
+                    product={product}
+                    categories={categories}
+                />
+            ) : (
+                <DefaultProductShow product={product} />
+            )}
+        </>
+    );
 }
 
 function DefaultProductShow({ product }: { product: CatalogProductDetails }) {
@@ -60,8 +73,6 @@ function DefaultProductShow({ product }: { product: CatalogProductDetails }) {
 
     return (
         <StorefrontLayout>
-            <Head title={product.name} />
-
             <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
                 <Link
                     href="/shop"

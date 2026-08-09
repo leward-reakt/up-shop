@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Price } from '@/components/price';
@@ -50,8 +50,6 @@ export default function FashionElegantProduct({
             variant="fashion-editorial"
             navigationCategories={categories}
         >
-            <Head title={product.name} />
-
             <div className="bg-[#f8f6f1]">
                 <div className="mx-auto max-w-[1600px] px-5 py-6 sm:px-8 lg:px-14">
                     <div className="flex flex-wrap items-center gap-2 text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">

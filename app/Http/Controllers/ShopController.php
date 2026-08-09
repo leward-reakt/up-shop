@@ -162,6 +162,17 @@ class ShopController extends Controller
             abort(404);
         }
 
+        $metaTitle = filled($product->meta_title)
+            ? (string) $product->meta_title
+            : $product->name;
+
+        $metaDescription = filled($product->meta_description)
+            ? (string) $product->meta_description
+            : str((string) $product->description)
+                ->squish()
+                ->limit(160, '')
+                ->toString();
+
         return Inertia::render('shop/show', [
             'theme' => $this->storefrontTheme()->value,
 
@@ -177,9 +188,9 @@ class ShopController extends Controller
 
                 'description' => $product->description,
 
-                'meta_title' => $product->meta_title,
+                'meta_title' => $metaTitle,
 
-                'meta_description' => $product->meta_description,
+                'meta_description' => $metaDescription,
 
                 'images' => $product->images
                     ->map(

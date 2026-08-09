@@ -146,9 +146,100 @@ class CatalogTest extends TestCase
                         'theme',
                         LandingPageTheme::FashionEditorial->value,
                     )
-                    ->where('product.id', $product->id)
-                    ->where('product.name', 'Test Product')
+                    ->where(
+                        'product.id',
+                        $product->id,
+                    )
+                    ->where(
+                        'product.name',
+                        'Test Product',
+                    )
                     ->has('product.images', 1),
+            );
+    }
+
+    public function test_product_page_exposes_configured_seo_metadata_and_base_url(): void
+    {
+        config()->set(
+            'app.url',
+            'https://shop.example.test/',
+        );
+
+        $category = Category::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $product = Product::factory()
+            ->for($category)
+            ->create([
+                'name' => 'SEO Product',
+                'slug' => 'seo-product',
+                'description' => 'Product description.',
+                'meta_title' => 'SEO Product Title',
+                'meta_description' => 'SEO Product Description',
+                'is_active' => true,
+            ]);
+
+        $this
+            ->get('/products/seo-product')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('shop/show')
+                    ->where(
+                        'product.id',
+                        $product->id,
+                    )
+                    ->where(
+                        'product.meta_title',
+                        'SEO Product Title',
+                    )
+                    ->where(
+                        'product.meta_description',
+                        'SEO Product Description',
+                    )
+                    ->where(
+                        'seo.base_url',
+                        'https://shop.example.test',
+                    ),
+            );
+    }
+
+    public function test_product_page_falls_back_to_product_content_for_seo_metadata(): void
+    {
+        $category = Category::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $product = Product::factory()
+            ->for($category)
+            ->create([
+                'name' => 'Fallback Product',
+                'slug' => 'fallback-product',
+                'description' => "Useful product description.\n\nWith extra spacing.",
+                'meta_title' => null,
+                'meta_description' => null,
+                'is_active' => true,
+            ]);
+
+        $this
+            ->get('/products/fallback-product')
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('shop/show')
+                    ->where(
+                        'product.id',
+                        $product->id,
+                    )
+                    ->where(
+                        'product.meta_title',
+                        'Fallback Product',
+                    )
+                    ->where(
+                        'product.meta_description',
+                        'Useful product description. With extra spacing.',
+                    ),
             );
     }
 
@@ -230,7 +321,10 @@ class CatalogTest extends TestCase
                         'theme',
                         LandingPageTheme::FashionEditorial->value,
                     )
-                    ->where('product.id', $product->id)
+                    ->where(
+                        'product.id',
+                        $product->id,
+                    )
                     ->has('categories', 1)
                     ->where(
                         'categories.0.id',
@@ -241,7 +335,9 @@ class CatalogTest extends TestCase
 
     public function test_invalid_shop_theme_falls_back_to_fashion_elegant(): void
     {
-        $this->createStoreSettings('invalid-theme');
+        $this->createStoreSettings(
+            'invalid-theme',
+        );
 
         $this
             ->get('/shop')
@@ -269,6 +365,8 @@ class CatalogTest extends TestCase
             $attributes['landing_page_theme'] = $theme;
         }
 
-        return StoreSetting::query()->create($attributes);
+        return StoreSetting::query()->create(
+            $attributes,
+        );
     }
 }

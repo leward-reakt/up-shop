@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type { CatalogCategory } from '@/types';
 
@@ -365,8 +365,6 @@ export default function FashionElegantContentPage({
             variant="fashion-editorial"
             navigationCategories={navigationCategories}
         >
-            <Head title={contentPage.meta_title} />
-
             <ContentPageHero title={contentPage.title} eyebrow={eyebrow} />
 
             {contentPage.slug === 'about' ? (
