@@ -179,6 +179,64 @@ class AdminOperationsTest extends TestCase
         );
     }
 
+    public function test_payment_status_exposes_expected_allowed_transitions(): void
+    {
+        $order = $this->createOrder();
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Pending,
+            'amount' => $order->grand_total,
+        ]);
+
+        $transitions = [
+            [
+                PaymentStatus::Pending,
+                [
+                    PaymentStatus::Paid,
+                    PaymentStatus::Failed,
+                    PaymentStatus::Cancelled,
+                ],
+            ],
+            [
+                PaymentStatus::Failed,
+                [
+                    PaymentStatus::Pending,
+                    PaymentStatus::Cancelled,
+                ],
+            ],
+            [
+                PaymentStatus::Paid,
+                [
+                    PaymentStatus::Refunded,
+                ],
+            ],
+            [
+                PaymentStatus::Cancelled,
+                [],
+            ],
+            [
+                PaymentStatus::Refunded,
+                [],
+            ],
+        ];
+
+        foreach ($transitions as [$currentStatus, $expectedStatuses]) {
+            $payment->update([
+                'status' => $currentStatus,
+            ]);
+
+            $payment->refresh();
+
+            $this->assertSame(
+                $expectedStatuses,
+                UpdatePaymentStatus::allowedNextStatuses(
+                    $payment,
+                ),
+            );
+        }
+    }
+
     public function test_payment_update_keeps_order_payment_status_in_sync(): void
     {
         $order = $this->createOrder();
@@ -209,6 +267,160 @@ class AdminOperationsTest extends TestCase
             PaymentStatus::Paid,
             $order->fresh()->payment_status,
         );
+    }
+
+    public function test_paid_payment_can_be_refunded_and_keeps_order_in_sync(): void
+    {
+        $order = $this->createOrder([
+            'payment_status' => PaymentStatus::Paid,
+        ]);
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Paid,
+            'amount' => $order->grand_total,
+            'paid_at' => now(),
+        ]);
+
+        app(UpdatePaymentStatus::class)->handle(
+            payment: $payment,
+            status: PaymentStatus::Refunded,
+            reference: 'BANK-123',
+            notes: 'Refund completed manually.',
+        );
+
+        $this->assertSame(
+            PaymentStatus::Refunded,
+            $payment->fresh()->status,
+        );
+
+        $this->assertNotNull(
+            $payment->fresh()->paid_at,
+        );
+
+        $this->assertSame(
+            PaymentStatus::Refunded,
+            $order->fresh()->payment_status,
+        );
+    }
+
+    public function test_failed_payment_can_be_returned_to_pending(): void
+    {
+        $order = $this->createOrder([
+            'payment_status' => PaymentStatus::Failed,
+        ]);
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Failed,
+            'amount' => $order->grand_total,
+        ]);
+
+        app(UpdatePaymentStatus::class)->handle(
+            payment: $payment,
+            status: PaymentStatus::Pending,
+            reference: null,
+            notes: 'Customer will retry payment.',
+        );
+
+        $this->assertSame(
+            PaymentStatus::Pending,
+            $payment->fresh()->status,
+        );
+
+        $this->assertSame(
+            PaymentStatus::Pending,
+            $order->fresh()->payment_status,
+        );
+    }
+
+    public function test_pending_payment_cannot_be_refunded(): void
+    {
+        $order = $this->createOrder();
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Pending,
+            'amount' => $order->grand_total,
+        ]);
+
+        try {
+            app(UpdatePaymentStatus::class)->handle(
+                payment: $payment,
+                status: PaymentStatus::Refunded,
+                reference: null,
+                notes: null,
+            );
+
+            $this->fail(
+                'Expected a validation exception.',
+            );
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey(
+                'status',
+                $exception->errors(),
+            );
+        }
+
+        $this->assertSame(
+            PaymentStatus::Pending,
+            $payment->fresh()->status,
+        );
+
+        $this->assertSame(
+            PaymentStatus::Pending,
+            $order->fresh()->payment_status,
+        );
+    }
+
+    public function test_paid_payment_cannot_move_to_invalid_statuses(): void
+    {
+        $order = $this->createOrder([
+            'payment_status' => PaymentStatus::Paid,
+        ]);
+
+        $payment = $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => PaymentStatus::Paid,
+            'amount' => $order->grand_total,
+            'paid_at' => now(),
+        ]);
+
+        foreach (
+            [
+                PaymentStatus::Pending,
+                PaymentStatus::Failed,
+                PaymentStatus::Cancelled,
+            ] as $invalidStatus
+        ) {
+            try {
+                app(UpdatePaymentStatus::class)->handle(
+                    payment: $payment->fresh(),
+                    status: $invalidStatus,
+                    reference: null,
+                    notes: null,
+                );
+
+                $this->fail(
+                    "Expected {$invalidStatus->value} to be rejected.",
+                );
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey(
+                    'status',
+                    $exception->errors(),
+                );
+            }
+
+            $this->assertSame(
+                PaymentStatus::Paid,
+                $payment->fresh()->status,
+            );
+
+            $this->assertSame(
+                PaymentStatus::Paid,
+                $order->fresh()->payment_status,
+            );
+        }
     }
 
     public function test_inactive_authenticated_customer_is_logged_out(): void

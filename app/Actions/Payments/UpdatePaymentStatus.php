@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Notifications\PaymentConfirmedNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class UpdatePaymentStatus
@@ -32,9 +33,22 @@ class UpdatePaymentStatus
                     ->lockForUpdate()
                     ->findOrFail($payment->id);
 
+                $statusChanged = $lockedPayment->status !== $status;
+
+                if ($statusChanged) {
+                    $allowedStatuses = self::allowedNextStatuses(
+                        $lockedPayment,
+                    );
+
+                    if (! in_array($status, $allowedStatuses, true)) {
+                        throw ValidationException::withMessages([
+                            'status' => 'That payment status transition is not allowed.',
+                        ]);
+                    }
+                }
+
                 $becamePaid = (
-                    $lockedPayment->status
-                    !== PaymentStatus::Paid
+                    $statusChanged
                     && $status === PaymentStatus::Paid
                 );
 
@@ -71,6 +85,8 @@ class UpdatePaymentStatus
                     'paid_at' => $paidAt,
                 ]);
 
+                // Keep the order snapshot synchronized with the payment
+                // inside the same transaction.
                 $lockedPayment
                     ->order()
                     ->update([
@@ -88,6 +104,33 @@ class UpdatePaymentStatus
         }
 
         return $updatedPayment;
+    }
+
+    /**
+     * @return array<int, PaymentStatus>
+     */
+    public static function allowedNextStatuses(
+        Payment $payment,
+    ): array {
+        return match ($payment->status) {
+            PaymentStatus::Pending => [
+                PaymentStatus::Paid,
+                PaymentStatus::Failed,
+                PaymentStatus::Cancelled,
+            ],
+
+            PaymentStatus::Failed => [
+                PaymentStatus::Pending,
+                PaymentStatus::Cancelled,
+            ],
+
+            PaymentStatus::Paid => [
+                PaymentStatus::Refunded,
+            ],
+
+            PaymentStatus::Cancelled,
+            PaymentStatus::Refunded => [],
+        };
     }
 
     private function notifyCustomer(

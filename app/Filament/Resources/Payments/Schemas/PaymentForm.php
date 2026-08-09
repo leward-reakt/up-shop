@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Payments\Schemas;
 
+use App\Actions\Payments\UpdatePaymentStatus;
 use App\Enums\PaymentStatus;
+use App\Models\Payment;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -39,13 +41,29 @@ class PaymentForm
 
                 Select::make('status')
                     ->options(
-                        collect(PaymentStatus::cases())
-                            ->mapWithKeys(
-                                fn (PaymentStatus $status): array => [
-                                    $status->value => $status->label(),
-                                ],
-                            )
-                            ->all(),
+                        function (?Payment $record): array {
+                            if ($record === null) {
+                                return [];
+                            }
+
+                            $statuses = [
+                                $record->status,
+                                ...UpdatePaymentStatus::allowedNextStatuses(
+                                    $record,
+                                ),
+                            ];
+
+                            return collect($statuses)
+                                ->unique(
+                                    fn (PaymentStatus $status): string => $status->value,
+                                )
+                                ->mapWithKeys(
+                                    fn (PaymentStatus $status): array => [
+                                        $status->value => $status->label(),
+                                    ],
+                                )
+                                ->all();
+                        },
                     )
                     ->required(),
 
