@@ -65,9 +65,22 @@ class OrderPlacedNotification extends Notification
 
     private function money(int $amount): string
     {
-        return Number::currency(
+        $currency = StoreSetting::currentCurrency();
+
+        $formattedAmount = Number::currency(
             $amount / 100,
-            in: StoreSetting::currentCurrency(),
+            in: $currency,
         );
+
+        return $formattedAmount !== false
+            ? $formattedAmount
+            : sprintf(
+                '%s %s',
+                $currency,
+                number_format(
+                    $amount / 100,
+                    2,
+                ),
+            );
     }
 }
