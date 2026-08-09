@@ -3,6 +3,8 @@
 namespace App\Actions\Orders;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Models\Order;
 use App\Notifications\OrderStatusChangedNotification;
@@ -82,9 +84,11 @@ class UpdateOrderStatus
                 OrderStatus::Confirmed,
             ],
 
-            OrderStatus::Confirmed => [
-                OrderStatus::Processing,
-            ],
+            OrderStatus::Confirmed => self::canEnterProcessing(
+                $order,
+            )
+                ? [OrderStatus::Processing]
+                : [],
 
             OrderStatus::Processing => [
                 $order->shipping_method === ShippingMethod::StorePickup
@@ -93,13 +97,24 @@ class UpdateOrderStatus
             ],
 
             OrderStatus::ReadyForPickup,
-            OrderStatus::Shipped => [
-                OrderStatus::Completed,
-            ],
+            OrderStatus::Shipped => $order->payment_status === PaymentStatus::Paid
+                ? [OrderStatus::Completed]
+                : [],
 
             OrderStatus::Completed,
             OrderStatus::Cancelled => [],
         };
+    }
+
+    private static function canEnterProcessing(
+        Order $order,
+    ): bool {
+        if ($order->payment_status === PaymentStatus::Paid) {
+            return true;
+        }
+
+        return $order->payment_method === PaymentMethod::CashOnDelivery
+            && $order->payment_status === PaymentStatus::Pending;
     }
 
     private function notifyCustomer(Order $order): void
