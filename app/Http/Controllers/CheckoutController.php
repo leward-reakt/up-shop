@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Orders\CalculateCheckoutTotals;
 use App\Actions\Orders\PlaceOrder;
 use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Address;
@@ -289,10 +290,12 @@ class CheckoutController extends Controller
             abort(403);
         }
 
-        $bankTransferInstructions =
+        $bankTransferInstructions = (
             $order->payment_method === PaymentMethod::BankTransfer
-                ? StoreSetting::currentBankTransferInstructions()
-                : null;
+            && $order->payment_status === PaymentStatus::Pending
+        )
+            ? StoreSetting::currentBankTransferInstructions()
+            : null;
 
         $pickupLocation =
             $order->shipping_method === ShippingMethod::StorePickup

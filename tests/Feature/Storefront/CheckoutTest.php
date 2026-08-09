@@ -829,7 +829,7 @@ class CheckoutTest extends TestCase
             'store_name' => 'Up Shop',
             'store_email' => 'hello@example.com',
             'contact_number' => null,
-            'business_address' => null,
+            'business_address' => '100 Up Shop Avenue, Makati City, Metro Manila 1200',
             'currency' => 'PHP',
             'default_shipping_fee' => 15_000,
             'free_shipping_threshold' => 300_000,
