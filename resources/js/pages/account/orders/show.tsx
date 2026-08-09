@@ -8,6 +8,7 @@ import type { AccountOrderDetails } from '@/types/account';
 
 type OrderProps = {
     order: AccountOrderDetails;
+    bank_transfer_instructions: string | null;
 };
 
 function formatDate(value: string | null) {
@@ -21,8 +22,15 @@ function formatDate(value: string | null) {
     });
 }
 
-export default function OrderDetails({ order }: OrderProps) {
+export default function OrderDetails({
+    order,
+    bank_transfer_instructions,
+}: OrderProps) {
     const isFashionEditorial = useFashionAccountTheme();
+
+    const showBankTransferInstructions =
+        order.payment_method === 'bank_transfer' &&
+        order.payment_status === 'pending';
 
     if (isFashionEditorial) {
         return (
@@ -251,6 +259,34 @@ export default function OrderDetails({ order }: OrderProps) {
                                     </div>
                                 )}
                             </dl>
+
+                            {showBankTransferInstructions && (
+                                <div className="mt-6 border-y border-neutral-300 bg-[#eee8e1] px-4 py-5">
+                                    <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
+                                        Bank transfer instructions
+                                    </p>
+
+                                    {bank_transfer_instructions ? (
+                                        <>
+                                            <p className="mt-4 border-l border-neutral-300 pl-4 text-sm leading-7 whitespace-pre-line text-neutral-700">
+                                                {bank_transfer_instructions}
+                                            </p>
+
+                                            <p className="mt-4 text-sm leading-7 text-neutral-600">
+                                                Your payment will remain pending
+                                                until the transfer is manually
+                                                verified.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="mt-4 text-sm leading-7 text-neutral-600">
+                                            Bank transfer instructions are
+                                            currently unavailable. Contact the
+                                            store before sending payment.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </section>
 
                         <section className="mt-12">
@@ -531,6 +567,34 @@ export default function OrderDetails({ order }: OrderProps) {
                                     </div>
                                 )}
                             </dl>
+
+                            {showBankTransferInstructions && (
+                                <div className="mt-5 rounded-lg border bg-muted/40 p-4">
+                                    <h3 className="font-medium">
+                                        Bank transfer instructions
+                                    </h3>
+
+                                    {bank_transfer_instructions ? (
+                                        <>
+                                            <p className="mt-3 border-l pl-4 text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                                                {bank_transfer_instructions}
+                                            </p>
+
+                                            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                                                Your payment will remain pending
+                                                until the transfer is manually
+                                                verified.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                                            Bank transfer instructions are
+                                            currently unavailable. Contact the
+                                            store before sending payment.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </section>
 
                         <section className="rounded-xl border bg-card p-5">

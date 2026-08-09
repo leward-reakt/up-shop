@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Account;
 
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\StoreSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -47,7 +50,16 @@ class OrderController extends Controller
             'payment',
         ]);
 
+        $bankTransferInstructions = (
+            $order->payment_method === PaymentMethod::BankTransfer
+            && $order->payment_status === PaymentStatus::Pending
+        )
+            ? StoreSetting::currentBankTransferInstructions()
+            : null;
+
         return Inertia::render('account/orders/show', [
+            'bank_transfer_instructions' => $bankTransferInstructions,
+
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
