@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Notifications\OrderPlacedNotification;
 use App\Notifications\OrderStatusChangedNotification;
 use App\Notifications\PaymentConfirmedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
@@ -25,6 +26,25 @@ use Tests\TestCase;
 class TransactionalNotificationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_transactional_notifications_remain_synchronous(): void
+    {
+        $notificationClasses = [
+            OrderPlacedNotification::class,
+            PaymentConfirmedNotification::class,
+            OrderStatusChangedNotification::class,
+        ];
+
+        foreach ($notificationClasses as $notificationClass) {
+            $this->assertFalse(
+                is_subclass_of(
+                    $notificationClass,
+                    ShouldQueue::class,
+                ),
+                "{$notificationClass} must remain synchronous for the MVP.",
+            );
+        }
+    }
 
     public function test_placing_order_sends_order_confirmation(): void
     {
@@ -161,6 +181,43 @@ class TransactionalNotificationTest extends TestCase
         app(UpdateOrderStatus::class)->handle(
             order: $order,
             status: OrderStatus::Processing,
+        );
+
+        Notification::assertSentOnDemand(
+            OrderStatusChangedNotification::class,
+        );
+    }
+
+    public function test_shipped_order_sends_status_notification(): void
+    {
+        Notification::fake();
+
+        $order = $this->createOrder([
+            'order_status' => OrderStatus::Processing,
+            'shipping_method' => ShippingMethod::FlatRate,
+        ]);
+
+        app(UpdateOrderStatus::class)->handle(
+            order: $order,
+            status: OrderStatus::Shipped,
+        );
+
+        Notification::assertSentOnDemand(
+            OrderStatusChangedNotification::class,
+        );
+    }
+
+    public function test_completed_order_sends_status_notification(): void
+    {
+        Notification::fake();
+
+        $order = $this->createOrder([
+            'order_status' => OrderStatus::Shipped,
+        ]);
+
+        app(UpdateOrderStatus::class)->handle(
+            order: $order,
+            status: OrderStatus::Completed,
         );
 
         Notification::assertSentOnDemand(
