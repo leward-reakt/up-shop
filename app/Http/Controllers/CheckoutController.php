@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Orders\CalculateCheckoutTotals;
 use App\Actions\Orders\PlaceOrder;
 use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Address;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -23,8 +23,6 @@ use Inertia\Response;
 
 class CheckoutController extends Controller
 {
-    private const CHECKOUT_LOCK_SECONDS = 60;
-
     public function index(
         Request $request,
         CalculateCheckoutTotals $calculateCheckoutTotals,
@@ -192,54 +190,35 @@ class CheckoutController extends Controller
         CheckoutRequest $request,
         PlaceOrder $placeOrder,
     ): RedirectResponse {
-        $response = Cache::lock(
-            $this->checkoutLockKey($request),
-            self::CHECKOUT_LOCK_SECONDS,
-        )->get(function () use (
-            $request,
-            $placeOrder,
-        ): RedirectResponse {
-            // Read the cart only after acquiring the checkout lock. A
-            // concurrent request must not retain a stale copy of a cart that
-            // another checkout request is currently consuming.
-            $cartQuantities = $this->cartQuantities($request);
+        $cartQuantities = $this->cartQuantities($request);
 
-            if ($cartQuantities === []) {
-                throw ValidationException::withMessages([
-                    'cart' => 'Your cart is empty.',
-                ]);
-            }
-
-            $order = $placeOrder->handle(
-                user: $request->user(),
-                cartQuantities: $cartQuantities,
-                data: $request->validated(),
-                discountCode: $this->discountCode($request),
-            );
-
-            // Guest carts live in the session, so they are cleared only after
-            // the database transaction completed successfully.
-            if ($request->user() === null) {
-                $request->session()->forget('cart.items');
-            }
-
-            $request->session()->forget('cart.discount_code');
-
-            $request->session()->put(
-                'checkout.order_id',
-                $order->id,
-            );
-
-            return to_route('checkout.success');
-        });
-
-        if (! $response instanceof RedirectResponse) {
+        if ($cartQuantities === []) {
             throw ValidationException::withMessages([
-                'cart' => 'Your order is already being processed. Please wait a moment before trying again.',
+                'cart' => 'Your cart is empty.',
             ]);
         }
 
-        return $response;
+        $order = $placeOrder->handle(
+            user: $request->user(),
+            cartQuantities: $cartQuantities,
+            data: $request->validated(),
+            discountCode: $this->discountCode($request),
+        );
+
+        // Guest carts live in the session, so they are cleared only after
+        // the database transaction completed successfully.
+        if ($request->user() === null) {
+            $request->session()->forget('cart.items');
+        }
+
+        $request->session()->forget('cart.discount_code');
+
+        $request->session()->put(
+            'checkout.order_id',
+            $order->id,
+        );
+
+        return to_route('checkout.success');
     }
 
     public function success(Request $request): Response
@@ -268,10 +247,14 @@ class CheckoutController extends Controller
             abort(403);
         }
 
-        $bankTransferInstructions =
+        // Bank details are actionable only while a manual bank transfer
+        // is still awaiting verification.
+        $bankTransferInstructions = (
             $order->payment_method === PaymentMethod::BankTransfer
-                ? StoreSetting::currentBankTransferInstructions()
-                : null;
+            && $order->payment_status === PaymentStatus::Pending
+        )
+            ? StoreSetting::currentBankTransferInstructions()
+            : null;
 
         return Inertia::render('checkout/success', [
             'bank_transfer_instructions' => $bankTransferInstructions,
@@ -472,17 +455,6 @@ class CheckoutController extends Controller
         return $discountCode === ''
             ? null
             : $discountCode;
-    }
-
-    private function checkoutLockKey(Request $request): string
-    {
-        $userId = $request->user()?->getAuthIdentifier();
-
-        $scope = $userId === null
-            ? 'session:'.$request->session()->getId()
-            : 'user:'.$userId;
-
-        return 'checkout:place-order:'.$scope;
     }
 
     private function paymentMethodLabel(

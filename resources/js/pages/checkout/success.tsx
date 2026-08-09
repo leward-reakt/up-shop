@@ -27,6 +27,10 @@ export default function CheckoutSuccess({
 
     const navigationCategories = sharedProps.store?.navigation_categories ?? [];
 
+    const showBankTransferInstructions =
+        order.payment_method === 'bank_transfer' &&
+        order.payment_status === 'pending';
+
     if (isFashionEditorial) {
         return (
             <StorefrontLayout
@@ -100,7 +104,7 @@ export default function CheckoutSuccess({
 
                         <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-20">
                             <div>
-                                {order.payment_method === 'bank_transfer' && (
+                                {showBankTransferInstructions && (
                                     <section className="border-y border-neutral-300 bg-[#eee8e1] px-5 py-6 sm:px-6">
                                         <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
                                             Payment
@@ -461,7 +465,7 @@ export default function CheckoutSuccess({
                         </div>
                     </div>
 
-                    {order.payment_method === 'bank_transfer' && (
+                    {showBankTransferInstructions && (
                         <div className="my-6 rounded-lg border bg-neutral-50 p-4">
                             <h2 className="font-medium">Bank transfer</h2>
 

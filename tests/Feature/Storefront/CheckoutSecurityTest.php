@@ -12,6 +12,7 @@ use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class CheckoutSecurityTest extends TestCase
@@ -166,24 +167,128 @@ class CheckoutSecurityTest extends TestCase
         );
     }
 
-    private function configureBankTransfer(): void
+    public function test_pending_bank_transfer_confirmation_includes_configured_instructions(): void
     {
+        $instructions = $this->configureBankTransfer();
+
+        $customer = User::factory()->create();
+
+        $order = $this->createBankTransferOrder(
+            customer: $customer,
+            paymentStatus: PaymentStatus::Pending,
+        );
+
+        $this
+            ->actingAs($customer)
+            ->withSession([
+                'checkout.order_id' => $order->id,
+            ])
+            ->get(route('checkout.success'))
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('checkout/success')
+                    ->where(
+                        'order.payment_method',
+                        PaymentMethod::BankTransfer->value,
+                    )
+                    ->where(
+                        'order.payment_status',
+                        PaymentStatus::Pending->value,
+                    )
+                    ->where(
+                        'bank_transfer_instructions',
+                        $instructions,
+                    ),
+            );
+    }
+
+    public function test_paid_bank_transfer_confirmation_does_not_include_instructions(): void
+    {
+        $this->configureBankTransfer();
+
+        $customer = User::factory()->create();
+
+        $order = $this->createBankTransferOrder(
+            customer: $customer,
+            paymentStatus: PaymentStatus::Paid,
+        );
+
+        $this
+            ->actingAs($customer)
+            ->withSession([
+                'checkout.order_id' => $order->id,
+            ])
+            ->get(route('checkout.success'))
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('checkout/success')
+                    ->where(
+                        'order.payment_method',
+                        PaymentMethod::BankTransfer->value,
+                    )
+                    ->where(
+                        'order.payment_status',
+                        PaymentStatus::Paid->value,
+                    )
+                    ->where(
+                        'bank_transfer_instructions',
+                        null,
+                    ),
+            );
+    }
+
+    private function configureBankTransfer(): string
+    {
+        $instructions = implode("\n", [
+            'Bank: BDO Unibank',
+            'Account Name: Up Shop Trading',
+            'Account Number: 1234-5678-9012',
+        ]);
+
         StoreSetting::query()->create([
             'store_name' => 'Up Shop',
             'store_email' => 'hello@example.com',
             'contact_number' => null,
             'business_address' => null,
-            'bank_transfer_instructions' => <<<'TEXT'
-Bank: BDO
-Account Name: Up Shop Trading
-Account Number: 1234-5678-9012
-TEXT,
+            'bank_transfer_instructions' => $instructions,
             'currency' => 'PHP',
             'default_shipping_fee' => 15_000,
             'free_shipping_threshold' => 300_000,
             'tax_rate_basis_points' => null,
             'social_links' => [],
         ]);
+
+        return $instructions;
+    }
+
+    private function createBankTransferOrder(
+        User $customer,
+        PaymentStatus $paymentStatus,
+    ): Order {
+        $order = $this->createOrder($customer);
+
+        $order->update([
+            'payment_method' => PaymentMethod::BankTransfer,
+            'payment_status' => $paymentStatus,
+        ]);
+
+        $isPaid = $paymentStatus === PaymentStatus::Paid;
+
+        $order->payment()->create([
+            'method' => PaymentMethod::BankTransfer,
+            'status' => $paymentStatus,
+            'amount' => $order->grand_total,
+            'reference' => $isPaid
+                ? 'BANK-123'
+                : null,
+            'paid_at' => $isPaid
+                ? now()
+                : null,
+        ]);
+
+        return $order;
     }
 
     private function createOrder(User $customer): Order
