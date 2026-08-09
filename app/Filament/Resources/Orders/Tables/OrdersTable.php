@@ -12,10 +12,14 @@ use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrdersTable
 {
@@ -81,6 +85,73 @@ class OrdersTable
                     ->sortable(),
             ])
             ->filters([
+                Filter::make('created_at')
+                    ->label('Order date')
+                    ->schema([
+                        DatePicker::make('from')
+                            ->label('From')
+                            ->maxDate(
+                                function (
+                                    Get $get,
+                                ): ?string {
+                                    $to = $get('to');
+
+                                    return is_string($to)
+                                        ? $to
+                                        : null;
+                                },
+                            ),
+
+                        DatePicker::make('to')
+                            ->label('To')
+                            ->minDate(
+                                function (
+                                    Get $get,
+                                ): ?string {
+                                    $from = $get('from');
+
+                                    return is_string($from)
+                                        ? $from
+                                        : null;
+                                },
+                            ),
+                    ])
+                    ->query(
+                        function (
+                            Builder $query,
+                            array $data,
+                        ): Builder {
+                            $from = $data['from'] ?? null;
+                            $to = $data['to'] ?? null;
+
+                            return $query
+                                ->when(
+                                    is_string($from)
+                                        && $from !== '',
+                                    fn (
+                                        Builder $query,
+                                    ): Builder => $query
+                                        ->whereDate(
+                                            'created_at',
+                                            '>=',
+                                            $from,
+                                        ),
+                                )
+                                ->when(
+                                    is_string($to)
+                                        && $to !== '',
+                                    fn (
+                                        Builder $query,
+                                    ): Builder => $query
+                                        ->whereDate(
+                                            'created_at',
+                                            '<=',
+                                            $to,
+                                        ),
+                                );
+                        },
+                    ),
+
                 SelectFilter::make(
                     'order_status',
                 )
