@@ -331,7 +331,7 @@ class CartController extends Controller
             ->withTrashed()
             ->with([
                 'category:id,name,slug,is_active',
-                'images:id,product_id,path,alt_text,sort_order,is_primary',
+                'images:id,product_id,path,alt_text,sort_order',
             ])
             ->whereIn('id', array_keys($quantities))
             ->get()
@@ -486,9 +486,7 @@ class CartController extends Controller
         Product $product,
         int $quantity,
     ): array {
-        $primaryImage = $product->images
-            ->firstWhere('is_primary', true)
-            ?? $product->images->first();
+        $mainImage = $product->images->first();
 
         $productIsVisible = $this->productIsVisible($product);
 
@@ -506,10 +504,10 @@ class CartController extends Controller
             'quantity' => $quantity,
             'stock_quantity' => $product->stock_quantity,
             'line_total' => $product->price * $quantity,
-            'image_url' => $primaryImage === null
+            'image_url' => $mainImage === null
                 ? null
-                : Storage::disk('public')->url($primaryImage->path),
-            'image_alt' => $primaryImage?->alt_text,
+                : Storage::disk('public')->url($mainImage->path),
+            'image_alt' => $mainImage?->alt_text,
             'is_product_visible' => $productIsVisible,
             'can_update_quantity' => $productIsVisible
                 && $product->stock_quantity > 0,

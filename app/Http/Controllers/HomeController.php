@@ -43,7 +43,7 @@ class HomeController extends Controller
         return Product::query()
             ->with([
                 'category:id,name,slug',
-                'images:id,product_id,path,alt_text,sort_order,is_primary',
+                'images:id,product_id,path,alt_text,sort_order',
             ])
             ->where('is_active', true)
             ->where(function (Builder $query): void {
@@ -82,10 +82,7 @@ class HomeController extends Controller
      */
     private function serializeProduct(Product $product): array
     {
-        $primaryImage = $product->images->firstWhere(
-            'is_primary',
-            true,
-        ) ?? $product->images->first();
+        $mainImage = $product->images->first();
 
         return [
             'id' => $product->id,
@@ -104,13 +101,13 @@ class HomeController extends Controller
                     'slug' => $product->category->slug,
                 ],
 
-            'image_url' => $primaryImage === null
+            'image_url' => $mainImage === null
                 ? null
                 : Storage::disk('public')->url(
-                    $primaryImage->path,
+                    $mainImage->path,
                 ),
 
-            'image_alt' => $primaryImage?->alt_text,
+            'image_alt' => $mainImage?->alt_text,
         ];
     }
 
@@ -142,28 +139,25 @@ class HomeController extends Controller
                     ->products()
                     ->where('is_active', true)
                     ->with([
-                        'images:id,product_id,path,alt_text,sort_order,is_primary',
+                        'images:id,product_id,path,alt_text,sort_order',
                     ])
                     ->latest()
                     ->first();
 
-                $primaryImage = $product?->images->firstWhere(
-                    'is_primary',
-                    true,
-                ) ?? $product?->images->first();
+                $mainImage = $product?->images->first();
 
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
 
-                    'image_url' => $primaryImage === null
+                    'image_url' => $mainImage === null
                         ? null
                         : Storage::disk('public')->url(
-                            $primaryImage->path,
+                            $mainImage->path,
                         ),
 
-                    'image_alt' => $primaryImage?->alt_text,
+                    'image_alt' => $mainImage?->alt_text,
                 ];
             })
             ->values()

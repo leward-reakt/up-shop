@@ -46,7 +46,7 @@ class ShopController extends Controller
         $query = Product::query()
             ->with([
                 'category:id,name,slug',
-                'images:id,product_id,path,alt_text,sort_order,is_primary',
+                'images:id,product_id,path,alt_text,sort_order',
             ])
             ->where('is_active', true)
             ->where(function (Builder $query): void {
@@ -147,7 +147,7 @@ class ShopController extends Controller
         $product->load([
             'category:id,name,slug,is_active',
 
-            'images:id,product_id,path,alt_text,sort_order,is_primary',
+            'images:id,product_id,path,alt_text,sort_order',
         ]);
 
         abort_unless($product->is_active, 404);
@@ -238,9 +238,7 @@ class ShopController extends Controller
      */
     private function productCardData(Product $product): array
     {
-        $primaryImage = $product->images
-            ->firstWhere('is_primary', true)
-            ?? $product->images->first();
+        $mainImage = $product->images->first();
 
         return [
             'id' => $product->id,
@@ -267,12 +265,12 @@ class ShopController extends Controller
                     'slug' => $product->category->slug,
                 ],
 
-            'image_url' => $primaryImage === null
+            'image_url' => $mainImage === null
                 ? null
                 : Storage::disk('public')
-                    ->url($primaryImage->path),
+                    ->url($mainImage->path),
 
-            'image_alt' => $primaryImage?->alt_text,
+            'image_alt' => $mainImage?->alt_text,
         ];
     }
 

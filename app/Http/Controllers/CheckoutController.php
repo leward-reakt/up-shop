@@ -135,10 +135,7 @@ class CheckoutController extends Controller
                         $product = $item['product'];
                         $quantity = $item['quantity'];
 
-                        $primaryImage = $product
-                            ->images
-                            ->firstWhere('is_primary', true)
-                            ?? $product->images->first();
+                        $mainImage = $product->images->first();
 
                         return [
                             'product_id' => $product->id,
@@ -150,10 +147,10 @@ class CheckoutController extends Controller
                                 $product->price
                                 * $quantity
                             ),
-                            'image_url' => $primaryImage === null
+                            'image_url' => $mainImage === null
                                 ? null
                                 : Storage::disk('public')
-                                    ->url($primaryImage->path),
+                                    ->url($mainImage->path),
                         ];
                     },
                 )
@@ -392,7 +389,7 @@ class CheckoutController extends Controller
         $products = Product::query()
             ->with([
                 'category:id,is_active',
-                'images:id,product_id,path,alt_text,sort_order,is_primary',
+                'images:id,product_id,path,alt_text,sort_order',
             ])
             ->whereIn(
                 'id',
