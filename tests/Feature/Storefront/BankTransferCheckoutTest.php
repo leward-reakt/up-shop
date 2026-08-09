@@ -244,20 +244,24 @@ class BankTransferCheckoutTest extends TestCase
             $order,
         ))->toMail($order);
 
-        $this->assertContains(
+        $mailText = $this->normalizeWhitespace(
+            implode(' ', $message->introLines),
+        );
+
+        $this->assertStringContainsString(
             'Bank transfer instructions:',
-            $message->introLines,
+            $mailText,
         );
 
-        $this->assertContains(
-            $instructions,
-            $message->introLines,
+        $this->assertStringContainsString(
+            $this->normalizeWhitespace($instructions),
+            $mailText,
         );
 
-        $this->assertContains(
+        $this->assertStringContainsString(
             'Your payment will remain pending until '
             .'the transfer is manually verified.',
-            $message->introLines,
+            $mailText,
         );
     }
 
@@ -277,14 +281,18 @@ class BankTransferCheckoutTest extends TestCase
             $order,
         ))->toMail($order);
 
-        $this->assertNotContains(
-            'Bank transfer instructions:',
-            $message->introLines,
+        $mailText = $this->normalizeWhitespace(
+            implode(' ', $message->introLines),
         );
 
-        $this->assertNotContains(
-            $instructions,
-            $message->introLines,
+        $this->assertStringNotContainsString(
+            'Bank transfer instructions:',
+            $mailText,
+        );
+
+        $this->assertStringNotContainsString(
+            $this->normalizeWhitespace($instructions),
+            $mailText,
         );
     }
 
@@ -306,6 +314,17 @@ Account Number: 1234-5678-9012
 
 Please complete the transfer before sending proof of payment.
 TEXT;
+    }
+
+    private function normalizeWhitespace(string $value): string
+    {
+        $normalized = preg_replace(
+            '/\s+/',
+            ' ',
+            trim($value),
+        );
+
+        return $normalized ?? '';
     }
 
     /**
