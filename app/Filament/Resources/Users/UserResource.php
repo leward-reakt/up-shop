@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Users;
 
-use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
@@ -66,11 +66,11 @@ class UserResource extends Resource
             ->withCount('orders')
             ->withSum(
                 [
-                    'orders as completed_spending' => fn (
+                    'orders as paid_spending' => fn (
                         Builder $query,
                     ): Builder => $query->where(
-                        'order_status',
-                        OrderStatus::Completed->value,
+                        'payment_status',
+                        PaymentStatus::Paid->value,
                     ),
                 ],
                 'grand_total',

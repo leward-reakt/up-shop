@@ -39,7 +39,7 @@ class UsersTable
                     ->sortable(),
 
                 TextColumn::make(
-                    'completed_spending',
+                    'paid_spending',
                 )
                     ->label('Total spending')
                     ->money(

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
+use App\Filament\Resources\Users\UserResource;
 use App\Filament\Widgets\AdminStatsOverview;
 use App\Filament\Widgets\InventoryAlerts;
 use App\Filament\Widgets\RecentOrders;
@@ -34,7 +35,7 @@ class AdminDashboardTest extends TestCase
             ->assertOk();
     }
 
-    public function test_stats_overview_displays_mvp_metrics(): void
+    public function test_stats_overview_reports_revenue_from_paid_orders_only(): void
     {
         $admin = User::factory()->create([
             'is_admin' => true,
@@ -57,14 +58,30 @@ class AdminDashboardTest extends TestCase
 
         $this->createOrder([
             'order_number' => 'PENDING-001',
+            'payment_status' => PaymentStatus::Pending,
             'order_status' => OrderStatus::Pending,
             'grand_total' => 50_000,
         ]);
 
         $this->createOrder([
-            'order_number' => 'COMPLETED-001',
-            'order_status' => OrderStatus::Completed,
+            'order_number' => 'PAID-001',
+            'payment_status' => PaymentStatus::Paid,
+            'order_status' => OrderStatus::Confirmed,
             'grand_total' => 115_000,
+        ]);
+
+        $this->createOrder([
+            'order_number' => 'UNPAID-COMPLETED-001',
+            'payment_status' => PaymentStatus::Pending,
+            'order_status' => OrderStatus::Completed,
+            'grand_total' => 200_000,
+        ]);
+
+        $this->createOrder([
+            'order_number' => 'REFUNDED-COMPLETED-001',
+            'payment_status' => PaymentStatus::Refunded,
+            'order_status' => OrderStatus::Completed,
+            'grand_total' => 300_000,
         ]);
 
         $this->actingAs($admin);
@@ -77,8 +94,60 @@ class AdminDashboardTest extends TestCase
             ->assertSee('Cancelled orders')
             ->assertSee('Total customers')
             ->assertSee('Total products')
-            ->assertSee('Completed revenue')
+            ->assertSee('Total revenue')
             ->assertSee('$1,150.00');
+    }
+
+    public function test_customer_spending_query_sums_paid_orders_only(): void
+    {
+        $customer = User::factory()->create([
+            'is_admin' => false,
+        ]);
+
+        $this->createOrder([
+            'order_number' => 'CUSTOMER-PAID-001',
+            'user_id' => $customer->id,
+            'payment_status' => PaymentStatus::Paid,
+            'order_status' => OrderStatus::Confirmed,
+            'grand_total' => 80_000,
+        ]);
+
+        $this->createOrder([
+            'order_number' => 'CUSTOMER-PAID-002',
+            'user_id' => $customer->id,
+            'payment_status' => PaymentStatus::Paid,
+            'order_status' => OrderStatus::Completed,
+            'grand_total' => 45_000,
+        ]);
+
+        $this->createOrder([
+            'order_number' => 'CUSTOMER-PENDING-001',
+            'user_id' => $customer->id,
+            'payment_status' => PaymentStatus::Pending,
+            'order_status' => OrderStatus::Completed,
+            'grand_total' => 200_000,
+        ]);
+
+        $this->createOrder([
+            'order_number' => 'CUSTOMER-REFUNDED-001',
+            'user_id' => $customer->id,
+            'payment_status' => PaymentStatus::Refunded,
+            'order_status' => OrderStatus::Completed,
+            'grand_total' => 300_000,
+        ]);
+
+        $reportedCustomer = UserResource::getEloquentQuery()
+            ->findOrFail($customer->id);
+
+        $this->assertSame(
+            4,
+            (int) $reportedCustomer->getAttribute('orders_count'),
+        );
+
+        $this->assertSame(
+            125_000,
+            (int) $reportedCustomer->getAttribute('paid_spending'),
+        );
     }
 
     public function test_recent_orders_widget_displays_latest_orders(): void
@@ -151,6 +220,8 @@ class AdminDashboardTest extends TestCase
             'order_number' => 'TEST-'.fake()
                 ->unique()
                 ->numerify('######'),
+
+            'user_id' => null,
 
             'customer_name' => 'Test Customer',
             'customer_email' => 'customer@example.com',

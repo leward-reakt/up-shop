@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StoreSetting;
@@ -36,10 +37,10 @@ class AdminStatsOverview extends BaseWidget
     {
         $currency = StoreSetting::currentCurrency();
 
-        $completedRevenue = (int) Order::query()
+        $paidRevenue = (int) Order::query()
             ->where(
-                'order_status',
-                OrderStatus::Completed,
+                'payment_status',
+                PaymentStatus::Paid->value,
             )
             ->sum('grand_total');
 
@@ -102,9 +103,9 @@ class AdminStatsOverview extends BaseWidget
             ),
 
             Stat::make(
-                'Completed revenue',
+                'Total revenue',
                 Number::currency(
-                    $completedRevenue / 100,
+                    $paidRevenue / 100,
                     in: $currency,
                 ),
             )->color('success'),
