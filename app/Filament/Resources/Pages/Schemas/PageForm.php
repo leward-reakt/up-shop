@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Pages\Schemas;
 
+use App\Models\Page;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,15 +19,13 @@ class PageForm
                     ->required()
                     ->maxLength(255),
 
-                TextInput::make('slug')
+                Select::make('slug')
                     ->required()
-                    ->maxLength(255)
-                    ->rules([
-                        'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                    ])
+                    ->options(Page::publicSlugOptions())
+                    ->in(Page::publicSlugs())
                     ->unique(ignoreRecord: true)
                     ->helperText(
-                        'Use lowercase letters, numbers, and hyphens only.',
+                        'Choose an approved public content page.',
                     ),
 
                 Textarea::make('content')
