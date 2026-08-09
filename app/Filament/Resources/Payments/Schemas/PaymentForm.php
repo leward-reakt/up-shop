@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Payments\Schemas;
 
 use App\Actions\Payments\UpdatePaymentStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
 use Filament\Forms\Components\Select;
@@ -16,15 +17,23 @@ class PaymentForm
     {
         return $schema
             ->components([
-                TextInput::make('order.order_number')
+                TextInput::make('order_id')
                     ->label('Order')
+                    ->formatStateUsing(
+                        fn (int|string|null $state, ?Payment $record): string => $record?->order?->order_number
+                            ?? ($state !== null ? "Order #{$state}" : 'Unavailable'),
+                    )
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('method')
                     ->formatStateUsing(
-                        fn ($state): string => $state?->label()
-                            ?? (string) $state,
+                        fn (mixed $state): string => match (true) {
+                            $state instanceof PaymentMethod => $state->label(),
+                            is_string($state) => PaymentMethod::tryFrom($state)?->label()
+                                ?? $state,
+                            default => '',
+                        },
                     )
                     ->disabled()
                     ->saved(false),
@@ -68,14 +77,27 @@ class PaymentForm
                     ->required(),
 
                 TextInput::make('reference')
+                    ->placeholder(
+                        fn (string $operation, ?Payment $record): string => match (true) {
+                            $operation === 'view' => 'Not provided',
+                            $record?->method === PaymentMethod::BankTransfer => 'Enter bank transfer reference',
+                            default => 'Optional',
+                        },
+                    )
                     ->maxLength(255),
 
                 Textarea::make('notes')
+                    ->placeholder(
+                        fn (string $operation): string => $operation === 'view'
+                            ? 'No notes'
+                            : 'Optional payment notes',
+                    )
                     ->rows(4)
                     ->maxLength(5000),
 
                 TextInput::make('paid_at')
                     ->label('Paid at')
+                    ->placeholder('Not paid yet')
                     ->disabled()
                     ->saved(false),
             ]);
