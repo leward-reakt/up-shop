@@ -76,7 +76,7 @@ export default function StorefrontLayout({
                     </div>
 
                     <header className="border-b border-neutral-200 bg-[#f8f6f1]">
-                        <div className="mx-auto grid max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6 lg:px-10">
+                        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr]">
                             <nav
                                 aria-label="Primary navigation"
                                 className="hidden min-w-0 items-center gap-5 overflow-hidden text-[10px] font-medium tracking-[0.14em] uppercase xl:flex"
