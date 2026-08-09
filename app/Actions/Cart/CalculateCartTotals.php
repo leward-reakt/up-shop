@@ -30,14 +30,27 @@ class CalculateCartTotals
         $subtotal = 0;
 
         foreach ($items as $item) {
-            $subtotal += $item['product']->price * $item['quantity'];
+            $product = $item['product'];
+            $quantity = $item['quantity'];
+
+            if (! $this->canContributeToTotals(
+                product: $product,
+                quantity: $quantity,
+            )) {
+                continue;
+            }
+
+            $subtotal += $product->price * $quantity;
         }
 
+        // Discount eligibility must use only the subtotal of currently
+        // purchasable cart lines.
         $discount = $this->applyDiscount->handle(
             code: $discountCode,
             subtotal: $subtotal,
         );
 
+        // Free-shipping eligibility must use the same valid subtotal.
         $shippingTotal = $this->shippingTotal($subtotal);
 
         $grandTotal = max(
@@ -55,6 +68,43 @@ class CalculateCartTotals
             'discount_code' => $discount['code'],
             'discount_error' => $discount['error'],
         ];
+    }
+
+    private function canContributeToTotals(
+        Product $product,
+        int $quantity,
+    ): bool {
+        if (
+            $quantity < 1
+            || $product->trashed()
+            || ! $product->is_active
+        ) {
+            return false;
+        }
+
+        if (
+            $product->stock_quantity < 1
+            || $quantity > $product->stock_quantity
+        ) {
+            return false;
+        }
+
+        if ($product->category_id === null) {
+            return true;
+        }
+
+        /*
+         * CartController and CheckoutController eager-load the category.
+         * PlaceOrder independently constrains category availability before
+         * calculating checkout totals, so no additional database query is
+         * necessary here when the relation is not loaded.
+         */
+        if (! $product->relationLoaded('category')) {
+            return true;
+        }
+
+        return $product->category !== null
+            && $product->category->is_active;
     }
 
     private function shippingTotal(int $subtotal): int
