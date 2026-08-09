@@ -35,16 +35,30 @@ class DiscountsTable
 
                 TextColumn::make('value')
                     ->formatStateUsing(
-                        fn (
+                        function (
                             int $state,
                             Discount $record,
-                        ): string => $record->type
-                            === 'percentage'
-                            ? "{$state}%"
-                            : Number::currency(
+                        ) use ($currency): string {
+                            if ($record->type === 'percentage') {
+                                return "{$state}%";
+                            }
+
+                            $formattedValue = Number::currency(
                                 $state / 100,
                                 in: $currency,
-                            ),
+                            );
+
+                            return $formattedValue !== false
+                                ? $formattedValue
+                                : sprintf(
+                                    '%s %s',
+                                    $currency,
+                                    number_format(
+                                        $state / 100,
+                                        2,
+                                    ),
+                                );
+                        },
                     ),
 
                 TextColumn::make(
