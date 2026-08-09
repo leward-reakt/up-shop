@@ -20,7 +20,7 @@ class PaymentForm
                 TextInput::make('order_id')
                     ->label('Order')
                     ->formatStateUsing(
-                        fn (int|string|null $state, ?Payment $record): string => $record?->order?->order_number
+                        fn (int|string|null $state, ?Payment $record): string => $record?->order->order_number
                             ?? ($state !== null ? "Order #{$state}" : 'Unavailable'),
                     )
                     ->disabled()
