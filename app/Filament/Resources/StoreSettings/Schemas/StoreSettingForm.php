@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\StoreSettings\Schemas;
 
 use App\Enums\LandingPageTheme;
+use App\Models\Order;
 use App\Models\StoreSetting;
+use Closure;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
@@ -70,12 +72,51 @@ class StoreSettingForm
                     ->maxLength(3)
                     ->rules([
                         'regex:/^[A-Za-z]{3}$/',
+                        fn (?StoreSetting $record): Closure => function (
+                            string $attribute,
+                            mixed $value,
+                            Closure $fail,
+                        ) use ($record): void {
+                            if (
+                                ! is_string($value)
+                                || preg_match(
+                                    '/^[A-Za-z]{3}$/',
+                                    $value,
+                                ) !== 1
+                            ) {
+                                return;
+                            }
+
+                            $currency = StoreSetting::normalizeCurrency(
+                                $value,
+                            );
+
+                            $currentCurrency = $record?->currencyCode()
+                                ?? StoreSetting::currentCurrency();
+
+                            if (
+                                $currency === $currentCurrency
+                                || ! Order::query()->exists()
+                            ) {
+                                return;
+                            }
+
+                            $fail(
+                                'The store currency cannot be changed after '
+                                .'the first order is created because existing '
+                                .'order amounts do not store a currency '
+                                .'snapshot and no currency conversion is '
+                                .'available.',
+                            );
+                        },
                     ])
                     ->live()
                     ->helperText(
-                        'Single store-wide three-letter currency code. '
-                        .'The MVP stores money in 1/100 units. Changing '
-                        .'currency does not convert existing amounts.',
+                        'Single store-wide three-letter currency code. It '
+                        .'can be changed only before the first order is '
+                        .'created because existing orders do not store '
+                        .'currency snapshots and the MVP does not convert '
+                        .'historical amounts.',
                     ),
 
                 TextInput::make('default_shipping_fee')
