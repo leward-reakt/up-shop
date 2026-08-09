@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\LandingPageTheme;
-use App\Http\Controllers\ContentPageController;
 use App\Models\Page;
 use App\Models\StoreSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +19,7 @@ class ContentPageThemeTest extends TestCase
             LandingPageTheme::FashionEditorial,
         );
 
-        foreach (ContentPageController::PUBLIC_SLUGS as $slug) {
+        foreach (Page::publicSlugs() as $slug) {
             Page::query()->create([
                 'title' => str($slug)
                     ->replace('-', ' ')
