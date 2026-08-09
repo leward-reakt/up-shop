@@ -8,6 +8,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -95,6 +96,8 @@ class CheckoutSecurityTest extends TestCase
     {
         Notification::fake();
 
+        $this->configureBankTransfer();
+
         $product = Product::factory()->create([
             'price' => 100_000,
             'stock_quantity' => 5,
@@ -140,6 +143,26 @@ class CheckoutSecurityTest extends TestCase
             PaymentStatus::Pending,
             $order->payment->status,
         );
+    }
+
+    private function configureBankTransfer(): void
+    {
+        StoreSetting::query()->create([
+            'store_name' => 'Up Shop',
+            'store_email' => 'hello@example.com',
+            'contact_number' => null,
+            'business_address' => null,
+            'bank_transfer_instructions' => <<<'TEXT'
+Bank: BDO
+Account Name: Up Shop Trading
+Account Number: 1234-5678-9012
+TEXT,
+            'currency' => 'PHP',
+            'default_shipping_fee' => 15_000,
+            'free_shipping_threshold' => 300_000,
+            'tax_rate_basis_points' => null,
+            'social_links' => [],
+        ]);
     }
 
     private function createOrder(User $customer): Order
