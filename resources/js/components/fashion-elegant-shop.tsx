@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { Price } from '@/components/price';
 import StorefrontLayout from '@/layouts/storefront-layout';
@@ -14,6 +14,18 @@ type FashionElegantShopProps = {
     categories: CatalogCategory[];
     filters: CatalogFilters;
 };
+
+type StoreSharedProps = {
+    store?: {
+        currency?: string;
+    };
+};
+
+function resolveCurrency(currency: string | undefined): string {
+    const normalized = currency?.trim().toUpperCase();
+
+    return normalized && /^[A-Z]{3}$/.test(normalized) ? normalized : 'PHP';
+}
 
 function FashionProductCard({ product }: { product: CatalogProduct }) {
     return (
@@ -70,6 +82,12 @@ export default function FashionElegantShop({
     categories,
     filters,
 }: FashionElegantShopProps) {
+    const page = usePage();
+
+    const sharedProps = page.props as unknown as StoreSharedProps;
+
+    const currency = resolveCurrency(sharedProps.store?.currency);
+
     const submitFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -170,7 +188,7 @@ export default function FashionElegantShop({
 
                             <div className="mt-2 grid grid-cols-2 gap-3">
                                 <label className="sr-only" htmlFor="min_price">
-                                    Minimum price
+                                    Minimum price in {currency}
                                 </label>
 
                                 <input
@@ -180,12 +198,12 @@ export default function FashionElegantShop({
                                     min="0"
                                     step="0.01"
                                     defaultValue={filters.min_price}
-                                    placeholder="Min ₱"
+                                    placeholder={`Min ${currency}`}
                                     className="w-full border-0 border-b border-neutral-300 bg-transparent px-0 py-2 text-sm transition outline-none focus:border-neutral-950 focus:ring-0"
                                 />
 
                                 <label className="sr-only" htmlFor="max_price">
-                                    Maximum price
+                                    Maximum price in {currency}
                                 </label>
 
                                 <input
@@ -195,7 +213,7 @@ export default function FashionElegantShop({
                                     min="0"
                                     step="0.01"
                                     defaultValue={filters.max_price}
-                                    placeholder="Max ₱"
+                                    placeholder={`Max ${currency}`}
                                     className="w-full border-0 border-b border-neutral-300 bg-transparent px-0 py-2 text-sm transition outline-none focus:border-neutral-950 focus:ring-0"
                                 />
                             </div>
