@@ -462,8 +462,8 @@ export default function Checkout({
                                             ? 'customer'
                                             : 'shipping'}{' '}
                                         address will be saved as your default
-                                        address after your order is
-                                        successfully placed.
+                                        address after your order is successfully
+                                        placed.
                                     </p>
                                 )}
 
@@ -760,9 +760,9 @@ export default function Checkout({
                                                             : 'mt-3 text-sm leading-6 text-neutral-600'
                                                     }
                                                 >
-                                                    Collect your order from
-                                                    this store address once it
-                                                    is ready for pickup.
+                                                    Collect your order from this
+                                                    store address once it is
+                                                    ready for pickup.
                                                 </p>
                                             </>
                                         ) : (

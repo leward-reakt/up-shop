@@ -650,7 +650,9 @@ export default function CheckoutSuccess({
 
                             {order.tax_total > 0 && (
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-neutral-600">Tax</span>
+                                    <span className="text-neutral-600">
+                                        Tax
+                                    </span>
 
                                     <Price amount={order.tax_total} />
                                 </div>

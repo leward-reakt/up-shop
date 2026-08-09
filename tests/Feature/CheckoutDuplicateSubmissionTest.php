@@ -17,6 +17,7 @@ class CheckoutDuplicateSubmissionTest extends TestCase
 
     public function test_concurrent_checkout_for_same_authenticated_customer_is_rejected_without_side_effects(): void
     {
+        $this->useDatabaseCacheLocks();
         $this->createStoreSettings();
 
         $user = User::factory()->create();
@@ -34,12 +35,20 @@ class CheckoutDuplicateSubmissionTest extends TestCase
             'quantity' => 2,
         ]);
 
+        $lockKey = 'checkout:place-order:user:'.$user->getAuthIdentifier();
+
         $lock = Cache::lock(
-            'checkout:place-order:user:'.$user->getAuthIdentifier(),
+            $lockKey,
             60,
         );
 
         $this->assertTrue($lock->get());
+
+        // Prove the configured cache driver can see the held lock before
+        // exercising the HTTP checkout request.
+        $this->assertFalse(
+            Cache::lock($lockKey, 60)->get(),
+        );
 
         try {
             $this
@@ -74,6 +83,7 @@ class CheckoutDuplicateSubmissionTest extends TestCase
 
     public function test_concurrent_checkout_for_same_guest_session_is_rejected_without_side_effects(): void
     {
+        $this->useDatabaseCacheLocks();
         $this->createStoreSettings();
 
         $product = Product::factory()->create([
@@ -88,18 +98,23 @@ class CheckoutDuplicateSubmissionTest extends TestCase
             ],
         ]);
 
-        // The request must carry the same session cookie whose ID is used
-        // by the pre-acquired lock. Otherwise StartSession will generate a
-        // different ID and the request will correctly appear as another guest.
         $session = $this->app['session']->driver();
         $sessionId = $session->getId();
 
+        $lockKey = 'checkout:place-order:session:'.$sessionId;
+
         $lock = Cache::lock(
-            'checkout:place-order:session:'.$sessionId,
+            $lockKey,
             60,
         );
 
         $this->assertTrue($lock->get());
+
+        // Prove the configured cache driver can see the held lock before
+        // exercising the HTTP checkout request.
+        $this->assertFalse(
+            Cache::lock($lockKey, 60)->get(),
+        );
 
         try {
             $this
@@ -126,6 +141,17 @@ class CheckoutDuplicateSubmissionTest extends TestCase
         $this->assertSame(
             5,
             $product->fresh()->stock_quantity,
+        );
+    }
+
+    private function useDatabaseCacheLocks(): void
+    {
+        // PHPUnit normally uses the in-memory array cache. This regression
+        // specifically verifies the cross-request atomic lock used by the
+        // application, which is database-backed in the project configuration.
+        config()->set(
+            'cache.default',
+            'database',
         );
     }
 
