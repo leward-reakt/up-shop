@@ -7,6 +7,7 @@ use App\Enums\ShippingMethod;
 use App\Models\Product;
 use App\Models\StoreSetting;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class CalculateCheckoutTotals
 {
@@ -30,6 +31,14 @@ class CalculateCheckoutTotals
         ?string $discountCode,
         ShippingMethod $shippingMethod,
     ): array {
+        $settings = StoreSetting::query()->first();
+
+        if ($settings === null) {
+            throw ValidationException::withMessages([
+                'cart' => 'Checkout is temporarily unavailable because store settings have not been configured.',
+            ]);
+        }
+
         $cartTotals = $this->calculateCartTotals->handle(
             $items,
             $discountCode,
@@ -39,8 +48,6 @@ class CalculateCheckoutTotals
         $subtotal = $cartTotals['subtotal'];
         $discountTotal = $cartTotals['discount_total'];
         $appliedDiscountCode = $cartTotals['discount_code'];
-
-        $settings = StoreSetting::query()->first();
 
         $shippingTotal = $this->calculateShipping(
             subtotal: $subtotal,
@@ -53,7 +60,6 @@ class CalculateCheckoutTotals
             $subtotal - $discountTotal,
         );
 
-        // The null-coalescing operator safely handles a missing settings row.
         $taxRateBasisPoints = (int) (
             $settings->tax_rate_basis_points ?? 0
         );
@@ -82,13 +88,13 @@ class CalculateCheckoutTotals
     private function calculateShipping(
         int $subtotal,
         ShippingMethod $shippingMethod,
-        ?StoreSetting $settings,
+        StoreSetting $settings,
     ): int {
         if ($shippingMethod === ShippingMethod::StorePickup) {
             return 0;
         }
 
-        $freeShippingThreshold = $settings?->free_shipping_threshold;
+        $freeShippingThreshold = $settings->free_shipping_threshold;
 
         if (
             $freeShippingThreshold !== null
@@ -97,9 +103,6 @@ class CalculateCheckoutTotals
             return 0;
         }
 
-        // The null-coalescing operator also safely handles $settings === null.
-        return (int) (
-            $settings->default_shipping_fee ?? 0
-        );
+        return $settings->default_shipping_fee;
     }
 }

@@ -50,6 +50,14 @@ class TransactionalNotificationTest extends TestCase
     {
         Notification::fake();
 
+        StoreSetting::query()->create([
+            'store_name' => 'Up Shop',
+            'currency' => 'PHP',
+            'default_shipping_fee' => 15_000,
+            'free_shipping_threshold' => null,
+            'tax_rate_basis_points' => null,
+        ]);
+
         $product = Product::factory()->create([
             'price' => 100_000,
             'stock_quantity' => 5,

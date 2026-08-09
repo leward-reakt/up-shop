@@ -25,6 +25,8 @@ class CalculateCheckoutTotalsTest extends TestCase
 
         $product = Product::factory()->create([
             'price' => 125_000,
+            'stock_quantity' => 5,
+            'is_active' => true,
         ]);
 
         $totals = app(CalculateCheckoutTotals::class)->handle(
