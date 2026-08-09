@@ -27,7 +27,7 @@ class PaymentForm
                             int|string|null $state,
                             ?Payment $record,
                         ): string => $record?->order
-                            ?->order_number
+                            ->order_number
                             ?? (
                                 $state !== null
                                     ? "Order #{$state}"

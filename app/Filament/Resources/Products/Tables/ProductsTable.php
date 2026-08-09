@@ -4,13 +4,14 @@ namespace App\Filament\Resources\Products\Tables;
 
 use App\Actions\Inventory\AdjustInventory;
 use App\Models\Product;
-use App\Models\StoreSetting;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -19,6 +20,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -26,8 +28,6 @@ class ProductsTable
 {
     public static function configure(Table $table): Table
     {
-        $currency = StoreSetting::currentCurrency();
-
         return $table
             ->columns([
                 TextColumn::make('name')
@@ -43,10 +43,7 @@ class ProductsTable
                     ->sortable(),
 
                 TextColumn::make('price')
-                    ->money(
-                        $currency,
-                        divideBy: 100,
-                    )
+                    ->money('PHP', divideBy: 100)
                     ->sortable(),
 
                 TextColumn::make('stock_quantity')
@@ -68,12 +65,12 @@ class ProductsTable
                     ->sortable(),
             ])
             ->filters([
+                TrashedFilter::make()
+                    ->label('Archived'),
+
                 SelectFilter::make('category_id')
                     ->label('Category')
-                    ->relationship(
-                        'category',
-                        'name',
-                    )
+                    ->relationship('category', 'name')
                     ->searchable()
                     ->preload(),
 
@@ -85,9 +82,7 @@ class ProductsTable
 
                 Filter::make('low_stock')
                     ->query(
-                        fn (
-                            Builder $query,
-                        ): Builder => $query
+                        fn (Builder $query): Builder => $query
                             ->whereColumn(
                                 'stock_quantity',
                                 '<=',
@@ -97,27 +92,17 @@ class ProductsTable
 
                 Filter::make('out_of_stock')
                     ->query(
-                        fn (
-                            Builder $query,
-                        ): Builder => $query
-                            ->where(
-                                'stock_quantity',
-                                0,
-                            ),
+                        fn (Builder $query): Builder => $query
+                            ->where('stock_quantity', 0),
                     ),
             ])
             ->recordActions([
                 Action::make('adjustStock')
                     ->label('Adjust stock')
                     ->schema([
-                        TextInput::make(
-                            'quantity_change',
-                        )
+                        TextInput::make('quantity_change')
                             ->label('Quantity change')
-                            ->helperText(
-                                'Use a positive number to add stock '
-                                .'or a negative number to remove stock.',
-                            )
+                            ->helperText('Use a positive number to add stock or a negative number to remove stock.')
                             ->integer()
                             ->required()
                             ->notIn([0]),
@@ -128,51 +113,50 @@ class ProductsTable
                             ->required()
                             ->maxLength(1000),
                     ])
-                    ->action(
-                        function (
-                            Product $record,
-                            array $data,
-                        ): void {
-                            $user = auth()->user();
+                    ->action(function (
+                        Product $record,
+                        array $data,
+                    ): void {
+                        $user = auth()->user();
 
-                            abort_unless(
-                                $user instanceof User,
-                                403,
-                            );
+                        abort_unless(
+                            $user instanceof User,
+                            403,
+                        );
 
-                            app(
-                                AdjustInventory::class,
-                            )->handle(
-                                product: $record,
-                                quantityChange: (int) $data[
-                                    'quantity_change'
-                                ],
-                                user: $user,
-                                notes: (string) $data[
-                                    'notes'
-                                ],
-                            );
+                        app(AdjustInventory::class)->handle(
+                            product: $record,
+                            quantityChange: (int) $data['quantity_change'],
+                            user: $user,
+                            notes: (string) $data['notes'],
+                        );
 
-                            Notification::make()
-                                ->title(
-                                    'Inventory updated',
-                                )
-                                ->success()
-                                ->send();
-                        },
-                    ),
+                        Notification::make()
+                            ->title('Inventory updated')
+                            ->success()
+                            ->send();
+                    }),
 
                 EditAction::make(),
-                DeleteAction::make(),
+
+                DeleteAction::make()
+                    ->label('Archive')
+                    ->successNotificationTitle('Product archived'),
+
+                RestoreAction::make()
+                    ->successNotificationTitle('Product restored'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('Archive selected')
+                        ->successNotificationTitle('Products archived'),
+
+                    RestoreBulkAction::make()
+                        ->label('Restore selected')
+                        ->successNotificationTitle('Products restored'),
                 ]),
             ])
-            ->defaultSort(
-                'updated_at',
-                'desc',
-            );
+            ->defaultSort('updated_at', 'desc');
     }
 }
