@@ -40,12 +40,12 @@ class CancelOrder
                     return $lockedOrder;
                 }
 
-                if (
-                    $lockedOrder->order_status
-                    === OrderStatus::Completed
-                ) {
+                if (! $lockedOrder->order_status->canBeCancelled()) {
                     throw ValidationException::withMessages([
-                        'order' => 'Completed orders cannot be cancelled.',
+                        'order' => sprintf(
+                            '%s orders cannot be cancelled.',
+                            $lockedOrder->order_status->label(),
+                        ),
                     ]);
                 }
 

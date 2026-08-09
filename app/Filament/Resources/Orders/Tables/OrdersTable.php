@@ -215,9 +215,9 @@ class OrdersTable
                     ->visible(
                         fn (
                             Order $record,
-                        ): bool => ! $record
+                        ): bool => $record
                             ->order_status
-                            ->isTerminal(),
+                            ->canBeCancelled(),
                     )
                     ->action(
                         function (

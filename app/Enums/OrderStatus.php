@@ -34,4 +34,15 @@ enum OrderStatus: string
             default => false,
         };
     }
+
+    public function canBeCancelled(): bool
+    {
+        return match ($this) {
+            self::Shipped,
+            self::Completed,
+            self::Cancelled => false,
+
+            default => true,
+        };
+    }
 }
