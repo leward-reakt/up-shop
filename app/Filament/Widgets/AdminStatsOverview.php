@@ -19,6 +19,14 @@ class AdminStatsOverview extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected function getColumns(): int|array|null
+    {
+        return [
+            'md' => 2,
+            'xl' => 4,
+        ];
+    }
+
     /**
      * @return array<int, Stat>
      */

@@ -15,7 +15,7 @@ class RecentOrders extends BaseWidget
 
     protected static bool $isLazy = false;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
     public function table(Table $table): Table
     {
