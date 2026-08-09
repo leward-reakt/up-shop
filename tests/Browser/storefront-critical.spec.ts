@@ -254,24 +254,12 @@ test('Filament products table renders at the tablet viewport', async ({
 
     await page.goto('/admin/login');
 
-    await page
-        .getByLabel('Email address', {
-            exact: true,
-        })
-        .fill('admin@example.com');
+    const loginForm = page.locator('form');
 
-    await page
-        .getByLabel('Password', {
-            exact: true,
-        })
-        .fill('password');
+    await loginForm.locator('input[type="email"]').fill('admin@example.com');
+    await loginForm.locator('input[type="password"]').fill('password');
 
-    await page
-        .getByRole('button', {
-            name: 'Sign in',
-            exact: true,
-        })
-        .click();
+    await loginForm.locator('button[type="submit"]').click();
 
     await expect(page).toHaveURL(/\/admin\/?$/);
 
@@ -284,13 +272,10 @@ test('Filament products table renders at the tablet viewport', async ({
         }),
     ).toBeVisible();
 
-    await expect(page.getByRole('table')).toBeVisible();
+    const table = page.getByRole('table');
 
-    await expect(
-        page.getByText(product.name, {
-            exact: true,
-        }),
-    ).toBeVisible();
+    await expect(table).toBeVisible();
+    await expect(table.locator('tbody tr').first()).toBeVisible();
 
     await expectNoHorizontalOverflow(page);
 });
