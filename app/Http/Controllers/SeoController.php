@@ -25,7 +25,7 @@ class SeoController extends Controller
         $pageUrls = Page::query()
             ->whereIn(
                 'slug',
-                ContentPageController::PUBLIC_SLUGS,
+                Page::publicSlugs(),
             )
             ->where('is_published', true)
             ->orderBy('slug')

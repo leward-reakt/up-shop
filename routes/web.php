@@ -9,6 +9,7 @@ use App\Http\Controllers\ContentPageController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ShopController;
+use App\Models\Page;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)
@@ -136,7 +137,7 @@ Route::get(
         'page',
         implode(
             '|',
-            ContentPageController::PUBLIC_SLUGS,
+            Page::publicSlugs(),
         ),
     )
     ->name('pages.show');

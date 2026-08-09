@@ -8,28 +8,10 @@ use Inertia\Response;
 
 class ContentPageController extends Controller
 {
-    /**
-     * Public pages approved by the locked MVP scope.
-     *
-     * @var array<int, string>
-     */
-    public const PUBLIC_SLUGS = [
-        'about',
-        'contact',
-        'privacy-policy',
-        'terms-and-conditions',
-        'shipping-policy',
-        'return-refund-policy',
-    ];
-
     public function __invoke(Page $page): Response
     {
         abort_unless(
-            in_array(
-                $page->slug,
-                self::PUBLIC_SLUGS,
-                true,
-            )
+            Page::isPublicSlug($page->slug)
             && $page->is_published,
             404,
         );
