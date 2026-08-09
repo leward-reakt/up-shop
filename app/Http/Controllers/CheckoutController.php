@@ -299,7 +299,7 @@ class CheckoutController extends Controller
 
         $pickupLocation =
             $order->shipping_method === ShippingMethod::StorePickup
-                ? StoreSetting::currentBusinessAddress()
+                ? $order->pickup_location
                 : null;
 
         return Inertia::render('checkout/success', [

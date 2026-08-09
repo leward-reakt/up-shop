@@ -117,13 +117,16 @@ class PlaceOrder
                     (string) $data['shipping_method'],
                 );
 
-                if (
-                    $shippingMethod === ShippingMethod::StorePickup
-                    && StoreSetting::currentBusinessAddress() === null
-                ) {
-                    throw ValidationException::withMessages([
-                        'shipping_method' => 'Store Pickup is currently unavailable because the pickup address has not been configured.',
-                    ]);
+                $pickupLocation = null;
+
+                if ($shippingMethod === ShippingMethod::StorePickup) {
+                    $pickupLocation = StoreSetting::currentBusinessAddress();
+
+                    if ($pickupLocation === null) {
+                        throw ValidationException::withMessages([
+                            'shipping_method' => 'Store Pickup is currently unavailable because the pickup address has not been configured.',
+                        ]);
+                    }
                 }
 
                 $paymentMethod = PaymentMethod::from(
@@ -184,6 +187,7 @@ class PlaceOrder
                     'shipping_country' => $checkoutAddress['country'],
 
                     'shipping_method' => $shippingMethod,
+                    'pickup_location' => $pickupLocation,
 
                     'discount_code' => $appliedDiscountCode,
 

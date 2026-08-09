@@ -42,7 +42,12 @@ class OrderForm
                 TextInput::make(
                     'shipping_address_line_1',
                 )
-                    ->label('Address')
+                    ->label(
+                        fn (?Order $record): string => $record?->shipping_method
+                            === ShippingMethod::StorePickup
+                                ? 'Customer address'
+                                : 'Delivery address',
+                    )
                     ->disabled()
                     ->saved(false),
 
@@ -89,6 +94,16 @@ class OrderForm
                     )
                     ->disabled()
                     ->saved(false),
+
+                Textarea::make('pickup_location')
+                    ->label('Pickup location')
+                    ->rows(3)
+                    ->disabled()
+                    ->saved(false)
+                    ->visible(
+                        fn (?Order $record): bool => $record?->shipping_method
+                            === ShippingMethod::StorePickup,
+                    ),
 
                 TextInput::make('subtotal')
                     ->formatStateUsing(

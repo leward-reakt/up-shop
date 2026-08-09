@@ -9,6 +9,7 @@ import type { AccountOrderDetails } from '@/types/account';
 type OrderProps = {
     order: AccountOrderDetails;
     bank_transfer_instructions: string | null;
+    pickup_location: string | null;
 };
 
 function formatDate(value: string | null) {
@@ -25,6 +26,7 @@ function formatDate(value: string | null) {
 export default function OrderDetails({
     order,
     bank_transfer_instructions,
+    pickup_location,
 }: OrderProps) {
     const isFashionEditorial = useFashionAccountTheme();
 
@@ -32,12 +34,16 @@ export default function OrderDetails({
         order.payment_method === 'bank_transfer' &&
         order.payment_status === 'pending';
 
+    const isStorePickup = order.shipping_method === 'store_pickup';
+
+    const pickupLocation = pickup_location?.trim() || null;
+
     if (isFashionEditorial) {
         return (
             <FashionAccountLayout
                 active="orders"
                 title={order.order_number}
-                description={`Placed ${formatDate(order.created_at)}. Review the items, delivery information, payment details, and totals for this purchase.`}
+                description={`Placed ${formatDate(order.created_at)}. Review the items, fulfillment information, payment details, and totals for this purchase.`}
             >
                 <Head title={`Order ${order.order_number}`} />
 
@@ -143,11 +149,13 @@ export default function OrderDetails({
 
                         <section className="border-t border-neutral-300 pt-8">
                             <p className="text-[9px] font-medium tracking-[0.16em] text-neutral-500 uppercase">
-                                Delivery
+                                {isStorePickup ? 'Pickup' : 'Delivery'}
                             </p>
 
                             <h2 className="mt-3 font-serif text-3xl tracking-[-0.025em]">
-                                Shipping information
+                                {isStorePickup
+                                    ? 'Pickup information'
+                                    : 'Shipping information'}
                             </h2>
 
                             <div className="mt-7 grid gap-8 sm:grid-cols-2">
@@ -172,25 +180,49 @@ export default function OrderDetails({
                                         {order.shipping_method_label}
                                     </p>
 
-                                    <p className="mt-4 text-sm leading-7 text-neutral-600">
-                                        {order.shipping_address.address_line_1}
-                                        <br />
-                                        {order.shipping_address
-                                            .address_line_2 && (
-                                            <>
-                                                {
-                                                    order.shipping_address
-                                                        .address_line_2
-                                                }
-                                                <br />
-                                            </>
-                                        )}
-                                        {order.shipping_address.city},{' '}
-                                        {order.shipping_address.province}{' '}
-                                        {order.shipping_address.postal_code}
-                                        <br />
-                                        {order.shipping_address.country}
-                                    </p>
+                                    {isStorePickup ? (
+                                        <div className="mt-4">
+                                            <p className="text-[9px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                                                Pickup location
+                                            </p>
+
+                                            {pickupLocation ? (
+                                                <p className="mt-3 text-sm leading-7 whitespace-pre-line text-neutral-600">
+                                                    {pickupLocation}
+                                                </p>
+                                            ) : (
+                                                <p className="mt-3 text-sm leading-7 text-neutral-600">
+                                                    Pickup location was not
+                                                    captured for this order.
+                                                    Contact the store before
+                                                    collection.
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-4 text-sm leading-7 text-neutral-600">
+                                            {
+                                                order.shipping_address
+                                                    .address_line_1
+                                            }
+                                            <br />
+                                            {order.shipping_address
+                                                .address_line_2 && (
+                                                <>
+                                                    {
+                                                        order.shipping_address
+                                                            .address_line_2
+                                                    }
+                                                    <br />
+                                                </>
+                                            )}
+                                            {order.shipping_address.city},{' '}
+                                            {order.shipping_address.province}{' '}
+                                            {order.shipping_address.postal_code}
+                                            <br />
+                                            {order.shipping_address.country}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -468,7 +500,9 @@ export default function OrderDetails({
 
                         <section className="rounded-xl border bg-card p-5">
                             <h2 className="font-semibold">
-                                Shipping information
+                                {isStorePickup
+                                    ? 'Pickup information'
+                                    : 'Shipping information'}
                             </h2>
 
                             <div className="mt-4 grid gap-6 text-sm sm:grid-cols-2">
@@ -489,25 +523,49 @@ export default function OrderDetails({
                                         {order.shipping_method_label}
                                     </p>
 
-                                    <p className="mt-2 text-muted-foreground">
-                                        {order.shipping_address.address_line_1}
-                                        <br />
-                                        {order.shipping_address
-                                            .address_line_2 && (
-                                            <>
-                                                {
-                                                    order.shipping_address
-                                                        .address_line_2
-                                                }
-                                                <br />
-                                            </>
-                                        )}
-                                        {order.shipping_address.city},{' '}
-                                        {order.shipping_address.province}{' '}
-                                        {order.shipping_address.postal_code}
-                                        <br />
-                                        {order.shipping_address.country}
-                                    </p>
+                                    {isStorePickup ? (
+                                        <div className="mt-2">
+                                            <p className="font-medium">
+                                                Pickup location
+                                            </p>
+
+                                            {pickupLocation ? (
+                                                <p className="mt-2 whitespace-pre-line text-muted-foreground">
+                                                    {pickupLocation}
+                                                </p>
+                                            ) : (
+                                                <p className="mt-2 text-muted-foreground">
+                                                    Pickup location was not
+                                                    captured for this order.
+                                                    Contact the store before
+                                                    collection.
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-2 text-muted-foreground">
+                                            {
+                                                order.shipping_address
+                                                    .address_line_1
+                                            }
+                                            <br />
+                                            {order.shipping_address
+                                                .address_line_2 && (
+                                                <>
+                                                    {
+                                                        order.shipping_address
+                                                            .address_line_2
+                                                    }
+                                                    <br />
+                                                </>
+                                            )}
+                                            {order.shipping_address.city},{' '}
+                                            {order.shipping_address.province}{' '}
+                                            {order.shipping_address.postal_code}
+                                            <br />
+                                            {order.shipping_address.country}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </section>

@@ -60,7 +60,7 @@ class OrderController extends Controller
 
         $pickupLocation =
             $order->shipping_method === ShippingMethod::StorePickup
-                ? StoreSetting::currentBusinessAddress()
+                ? $order->pickup_location
                 : null;
 
         return Inertia::render('account/orders/show', [

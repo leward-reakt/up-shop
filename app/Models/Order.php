@@ -33,6 +33,7 @@ class Order extends Model
         'shipping_postal_code',
         'shipping_country',
         'shipping_method',
+        'pickup_location',
         'discount_code',
         'subtotal',
         'discount_total',

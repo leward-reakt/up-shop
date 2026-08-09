@@ -21,6 +21,8 @@ class StorePickupTest extends TestCase
 
     private const PICKUP_LOCATION = '100 Up Shop Avenue, Makati City, Metro Manila 1200';
 
+    private const UPDATED_PICKUP_LOCATION = '200 New Store Road, Taguig City, Metro Manila 1630';
+
     public function test_checkout_exposes_configured_pickup_location_and_store_pickup_option(): void
     {
         $this->createStoreSettings();
@@ -150,11 +152,11 @@ class StorePickupTest extends TestCase
         );
     }
 
-    public function test_store_pickup_success_exposes_store_address_while_preserving_customer_snapshot(): void
+    public function test_store_pickup_success_uses_order_time_pickup_location_snapshot_while_preserving_customer_snapshot(): void
     {
         Notification::fake();
 
-        $this->createStoreSettings();
+        $settings = $this->createStoreSettings();
 
         $product = Product::factory()->create([
             'price' => 50_000,
@@ -184,6 +186,11 @@ class StorePickupTest extends TestCase
         );
 
         $this->assertSame(
+            self::PICKUP_LOCATION,
+            $order->pickup_location,
+        );
+
+        $this->assertSame(
             '123 Customer Street',
             $order->shipping_address_line_1,
         );
@@ -192,6 +199,10 @@ class StorePickupTest extends TestCase
             0,
             $order->shipping_total,
         );
+
+        $settings->update([
+            'business_address' => self::UPDATED_PICKUP_LOCATION,
+        ]);
 
         $this
             ->get(route('checkout.success'))
@@ -214,9 +225,9 @@ class StorePickupTest extends TestCase
             );
     }
 
-    public function test_customer_pickup_order_details_expose_store_pickup_location(): void
+    public function test_customer_pickup_order_details_use_persisted_pickup_location_snapshot(): void
     {
-        $this->createStoreSettings();
+        $settings = $this->createStoreSettings();
 
         $customer = User::factory()->create();
 
@@ -237,6 +248,7 @@ class StorePickupTest extends TestCase
             'shipping_country' => 'PH',
 
             'shipping_method' => ShippingMethod::StorePickup,
+            'pickup_location' => self::PICKUP_LOCATION,
 
             'discount_code' => null,
 
@@ -252,6 +264,10 @@ class StorePickupTest extends TestCase
 
             'customer_notes' => null,
             'admin_notes' => null,
+        ]);
+
+        $settings->update([
+            'business_address' => self::UPDATED_PICKUP_LOCATION,
         ]);
 
         $this

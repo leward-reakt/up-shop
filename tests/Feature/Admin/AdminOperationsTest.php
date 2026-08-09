@@ -12,6 +12,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -39,6 +40,40 @@ class AdminOperationsTest extends TestCase
                 ),
             )
             ->assertOk();
+    }
+
+    public function test_admin_pickup_order_details_render_persisted_pickup_location_snapshot(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'is_active' => true,
+        ]);
+
+        StoreSetting::query()->create([
+            'store_name' => 'Up Shop',
+            'business_address' => '200 Current Store Road, Taguig City',
+            'currency' => 'PHP',
+        ]);
+
+        $order = $this->createOrder([
+            'shipping_method' => ShippingMethod::StorePickup,
+            'pickup_location' => '100 Historical Store Avenue, Makati City',
+            'shipping_total' => 0,
+            'grand_total' => 100_000,
+        ]);
+
+        $this
+            ->actingAs($admin)
+            ->get(
+                route(
+                    'filament.admin.resources.orders.view',
+                    ['record' => $order],
+                ),
+            )
+            ->assertOk()
+            ->assertSee('Pickup location')
+            ->assertSee('100 Historical Store Avenue, Makati City')
+            ->assertDontSee('200 Current Store Road, Taguig City');
     }
 
     public function test_manual_inventory_adjustment_updates_stock_and_creates_history(): void
@@ -546,6 +581,7 @@ class AdminOperationsTest extends TestCase
             'shipping_postal_code' => '1000',
             'shipping_country' => 'PH',
             'shipping_method' => ShippingMethod::FlatRate,
+            'pickup_location' => null,
             'discount_code' => null,
             'subtotal' => 100_000,
             'discount_total' => 0,
