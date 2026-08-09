@@ -26,6 +26,8 @@ class OrderStatusChangedNotification extends Notification
         $subject = match ($this->order->order_status) {
             OrderStatus::Processing => "Order {$this->order->order_number} is being processed",
 
+            OrderStatus::ReadyForPickup => "Order {$this->order->order_number} is ready for pickup",
+
             OrderStatus::Shipped => "Order {$this->order->order_number} has shipped",
 
             OrderStatus::Completed => "Order {$this->order->order_number} is complete",
@@ -35,14 +37,31 @@ class OrderStatusChangedNotification extends Notification
             default => "Order {$this->order->order_number} updated",
         };
 
+        $statusMessage = match ($this->order->order_status) {
+            OrderStatus::ReadyForPickup => "Your order {$this->order->order_number} is ready for pickup.",
+
+            default => "Your order {$this->order->order_number} is now {$this->order->order_status->label()}.",
+        };
+
         $message = (new MailMessage)
             ->subject($subject)
             ->greeting(
                 "Hi {$this->order->customer_name},",
             )
-            ->line(
-                "Your order {$this->order->order_number} is now {$this->order->order_status->label()}.",
-            );
+            ->line($statusMessage);
+
+        if ($this->order->order_status === OrderStatus::ReadyForPickup) {
+            $pickupLocation = $this->order->pickup_location;
+
+            if (
+                is_string($pickupLocation)
+                && trim($pickupLocation) !== ''
+            ) {
+                $message->line(
+                    'Pickup location: '.trim($pickupLocation),
+                );
+            }
+        }
 
         if ($this->order->user_id !== null) {
             $message->action(

@@ -61,6 +61,7 @@ class UpdateOrderStatus
                 $status,
                 [
                     OrderStatus::Processing,
+                    OrderStatus::ReadyForPickup,
                     OrderStatus::Shipped,
                     OrderStatus::Completed,
                 ],

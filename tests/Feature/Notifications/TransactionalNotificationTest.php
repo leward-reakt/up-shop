@@ -197,6 +197,64 @@ class TransactionalNotificationTest extends TestCase
         );
     }
 
+    public function test_ready_for_pickup_order_sends_status_notification_once(): void
+    {
+        Notification::fake();
+
+        $order = $this->createOrder([
+            'order_status' => OrderStatus::Processing,
+            'payment_status' => PaymentStatus::Paid,
+            'shipping_method' => ShippingMethod::StorePickup,
+            'pickup_location' => '123 Pickup Street, Quezon City',
+        ]);
+
+        app(UpdateOrderStatus::class)->handle(
+            order: $order,
+            status: OrderStatus::ReadyForPickup,
+        );
+
+        app(UpdateOrderStatus::class)->handle(
+            order: $order->fresh(),
+            status: OrderStatus::ReadyForPickup,
+        );
+
+        Notification::assertSentOnDemandTimes(
+            OrderStatusChangedNotification::class,
+            1,
+        );
+    }
+
+    public function test_ready_for_pickup_notification_uses_dedicated_copy_and_pickup_snapshot(): void
+    {
+        $pickupLocation = '123 Pickup Street, Quezon City';
+
+        $order = $this->createOrder([
+            'order_status' => OrderStatus::ReadyForPickup,
+            'payment_status' => PaymentStatus::Paid,
+            'shipping_method' => ShippingMethod::StorePickup,
+            'pickup_location' => $pickupLocation,
+        ]);
+
+        $message = (new OrderStatusChangedNotification(
+            $order,
+        ))->toMail($order);
+
+        $this->assertSame(
+            "Order {$order->order_number} is ready for pickup",
+            $message->subject,
+        );
+
+        $this->assertContains(
+            "Your order {$order->order_number} is ready for pickup.",
+            $message->introLines,
+        );
+
+        $this->assertContains(
+            "Pickup location: {$pickupLocation}",
+            $message->introLines,
+        );
+    }
+
     public function test_shipped_order_sends_status_notification(): void
     {
         Notification::fake();
