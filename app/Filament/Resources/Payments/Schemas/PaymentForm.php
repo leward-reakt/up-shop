@@ -6,6 +6,7 @@ use App\Actions\Payments\UpdatePaymentStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
+use App\Models\StoreSetting;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -15,23 +16,39 @@ class PaymentForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $schema
             ->components([
                 TextInput::make('order_id')
                     ->label('Order')
                     ->formatStateUsing(
-                        fn (int|string|null $state, ?Payment $record): string => $record?->order->order_number
-                            ?? ($state !== null ? "Order #{$state}" : 'Unavailable'),
+                        fn (
+                            int|string|null $state,
+                            ?Payment $record,
+                        ): string => $record?->order
+                            ?->order_number
+                            ?? (
+                                $state !== null
+                                    ? "Order #{$state}"
+                                    : 'Unavailable'
+                            ),
                     )
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('method')
                     ->formatStateUsing(
-                        fn (mixed $state): string => match (true) {
-                            $state instanceof PaymentMethod => $state->label(),
-                            is_string($state) => PaymentMethod::tryFrom($state)?->label()
-                                ?? $state,
+                        fn (
+                            mixed $state,
+                        ): string => match (true) {
+                            $state instanceof PaymentMethod => $state
+                                ->label(),
+
+                            is_string($state) => PaymentMethod::tryFrom(
+                                $state,
+                            )?->label() ?? $state,
+
                             default => '',
                         },
                     )
@@ -39,18 +56,25 @@ class PaymentForm
                     ->saved(false),
 
                 TextInput::make('amount')
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                            ),
                     )
                     ->disabled()
                     ->saved(false),
 
                 Select::make('status')
                     ->options(
-                        function (?Payment $record): array {
+                        function (
+                            ?Payment $record,
+                        ): array {
                             if ($record === null) {
                                 return [];
                             }
@@ -64,11 +88,17 @@ class PaymentForm
 
                             return collect($statuses)
                                 ->unique(
-                                    fn (PaymentStatus $status): string => $status->value,
+                                    fn (
+                                        PaymentStatus $status,
+                                    ): string => $status
+                                        ->value,
                                 )
                                 ->mapWithKeys(
-                                    fn (PaymentStatus $status): array => [
-                                        $status->value => $status->label(),
+                                    fn (
+                                        PaymentStatus $status,
+                                    ): array => [
+                                        $status->value => $status
+                                            ->label(),
                                     ],
                                 )
                                 ->all();
@@ -78,9 +108,15 @@ class PaymentForm
 
                 TextInput::make('reference')
                     ->placeholder(
-                        fn (string $operation, ?Payment $record): string => match (true) {
+                        fn (
+                            string $operation,
+                            ?Payment $record,
+                        ): string => match (true) {
                             $operation === 'view' => 'Not provided',
-                            $record?->method === PaymentMethod::BankTransfer => 'Enter bank transfer reference',
+
+                            $record?->method
+                                === PaymentMethod::BankTransfer => 'Enter bank transfer reference',
+
                             default => 'Optional',
                         },
                     )
@@ -88,7 +124,10 @@ class PaymentForm
 
                 Textarea::make('notes')
                     ->placeholder(
-                        fn (string $operation): string => $operation === 'view'
+                        fn (
+                            string $operation,
+                        ): string => $operation
+                            === 'view'
                             ? 'No notes'
                             : 'Optional payment notes',
                     )

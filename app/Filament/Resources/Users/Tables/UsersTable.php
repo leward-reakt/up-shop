@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Models\StoreSetting;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
@@ -13,6 +14,8 @@ class UsersTable
 {
     public static function configure(Table $table): Table
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $table
             ->columns([
                 TextColumn::make('name')
@@ -35,9 +38,14 @@ class UsersTable
                     ->numeric()
                     ->sortable(),
 
-                TextColumn::make('completed_spending')
+                TextColumn::make(
+                    'completed_spending',
+                )
                     ->label('Total spending')
-                    ->money('PHP', divideBy: 100)
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    )
                     ->default(0),
 
                 TextColumn::make('created_at')
@@ -53,6 +61,9 @@ class UsersTable
                 ViewAction::make(),
                 EditAction::make(),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort(
+                'created_at',
+                'desc',
+            );
     }
 }

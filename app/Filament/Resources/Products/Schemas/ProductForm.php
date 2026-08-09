@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
+use App\Models\StoreSetting;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -16,6 +17,8 @@ class ProductForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $schema
             ->components([
                 Select::make('category_id')
@@ -33,7 +36,9 @@ class ProductForm
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
-                    ->helperText('Used in the public product URL.'),
+                    ->helperText(
+                        'Used in the public product URL.',
+                    ),
 
                 TextInput::make('sku')
                     ->label('SKU')
@@ -47,7 +52,7 @@ class ProductForm
 
                 TextInput::make('price')
                     ->label('Price')
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->required()
                     ->numeric()
                     ->minValue(0)
@@ -55,15 +60,27 @@ class ProductForm
                     ->formatStateUsing(
                         fn (int|string|null $state): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2, '.', ''),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                                '.',
+                                '',
+                            ),
                     )
                     ->dehydrateStateUsing(
-                        fn (int|float|string|null $state): int => (int) round(((float) $state) * 100),
+                        fn (
+                            int|float|string|null $state,
+                        ): int => (int) round(
+                            ((float) $state) * 100,
+                        ),
                     )
                     ->rules([
                         'decimal:0,2',
                     ])
-                    ->helperText('Displayed in pesos; stored internally in centavos.'),
+                    ->helperText(
+                        "Displayed in {$currency}; stored internally "
+                        .'in 1/100 currency units.',
+                    ),
 
                 TextInput::make('stock_quantity')
                     ->label('Stock quantity')
@@ -82,7 +99,9 @@ class ProductForm
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true)
-                    ->helperText('Inactive products are hidden from the storefront.'),
+                    ->helperText(
+                        'Inactive products are hidden from the storefront.',
+                    ),
 
                 Toggle::make('is_featured')
                     ->label('Featured')
@@ -100,10 +119,15 @@ class ProductForm
                             ->visibility('public')
                             ->maxSize(5120)
                             ->preventFilePathTampering(
-                                allowFilePathUsing: fn (string $file): bool => str_starts_with(
+                                allowFilePathUsing: fn (
+                                    string $file,
+                                ): bool => str_starts_with(
                                     $file,
                                     'products/',
-                                ) && ! str_contains($file, '..'),
+                                ) && ! str_contains(
+                                    $file,
+                                    '..',
+                                ),
                             )
                             ->required(),
 
@@ -111,17 +135,28 @@ class ProductForm
                             ->label('Alternative text')
                             ->maxLength(255),
                     ])
-                    ->afterDelete(function (Model $record): void {
-                        $path = $record->getAttribute('path');
+                    ->afterDelete(
+                        function (Model $record): void {
+                            $path = $record->getAttribute(
+                                'path',
+                            );
 
-                        if (is_string($path) && $path !== '') {
-                            Storage::disk('public')->delete($path);
-                        }
-                    })
+                            if (
+                                is_string($path)
+                                && $path !== ''
+                            ) {
+                                Storage::disk('public')
+                                    ->delete($path);
+                            }
+                        },
+                    )
                     ->maxItems(8)
                     ->collapsible()
                     ->columnSpanFull()
-                    ->helperText('Drag images to reorder them. The first image is used as the main storefront image.'),
+                    ->helperText(
+                        'Drag images to reorder them. The first image '
+                        .'is used as the main storefront image.',
+                    ),
 
                 TextInput::make('meta_title')
                     ->label('SEO title')

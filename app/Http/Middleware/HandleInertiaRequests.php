@@ -128,6 +128,9 @@ class HandleInertiaRequests extends Middleware
             'contact_number' => $settings?->contact_number,
             'business_address' => $settings?->business_address,
 
+            'currency' => $settings?->currencyCode()
+                ?? StoreSetting::DEFAULT_CURRENCY,
+
             'theme' => $theme->value,
 
             'navigation_categories' => $this->navigationCategories(),

@@ -3,16 +3,20 @@
 namespace App\Filament\Resources\Discounts\Tables;
 
 use App\Models\Discount;
+use App\Models\StoreSetting;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Number;
 
 class DiscountsTable
 {
     public static function configure(Table $table): Table
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $table
             ->columns([
                 TextColumn::make('code')
@@ -21,7 +25,10 @@ class DiscountsTable
 
                 TextColumn::make('type')
                     ->formatStateUsing(
-                        fn (string $state): string => $state === 'percentage'
+                        fn (
+                            string $state,
+                        ): string => $state
+                            === 'percentage'
                             ? 'Percentage'
                             : 'Fixed amount',
                     ),
@@ -31,14 +38,23 @@ class DiscountsTable
                         fn (
                             int $state,
                             Discount $record,
-                        ): string => $record->type === 'percentage'
+                        ): string => $record->type
+                            === 'percentage'
                             ? "{$state}%"
-                            : '₱'.number_format($state / 100, 2),
+                            : Number::currency(
+                                $state / 100,
+                                in: $currency,
+                            ),
                     ),
 
-                TextColumn::make('minimum_purchase')
+                TextColumn::make(
+                    'minimum_purchase',
+                )
                     ->label('Minimum')
-                    ->money('PHP', divideBy: 100)
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    )
                     ->placeholder('None'),
 
                 TextColumn::make('starts_at')
@@ -60,6 +76,9 @@ class DiscountsTable
             ->recordActions([
                 EditAction::make(),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort(
+                'created_at',
+                'desc',
+            );
     }
 }

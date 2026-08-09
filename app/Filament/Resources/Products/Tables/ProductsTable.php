@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Products\Tables;
 
 use App\Actions\Inventory\AdjustInventory;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -25,6 +26,8 @@ class ProductsTable
 {
     public static function configure(Table $table): Table
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $table
             ->columns([
                 TextColumn::make('name')
@@ -40,7 +43,10 @@ class ProductsTable
                     ->sortable(),
 
                 TextColumn::make('price')
-                    ->money('PHP', divideBy: 100)
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    )
                     ->sortable(),
 
                 TextColumn::make('stock_quantity')
@@ -64,7 +70,10 @@ class ProductsTable
             ->filters([
                 SelectFilter::make('category_id')
                     ->label('Category')
-                    ->relationship('category', 'name')
+                    ->relationship(
+                        'category',
+                        'name',
+                    )
                     ->searchable()
                     ->preload(),
 
@@ -76,7 +85,9 @@ class ProductsTable
 
                 Filter::make('low_stock')
                     ->query(
-                        fn (Builder $query): Builder => $query
+                        fn (
+                            Builder $query,
+                        ): Builder => $query
                             ->whereColumn(
                                 'stock_quantity',
                                 '<=',
@@ -86,17 +97,27 @@ class ProductsTable
 
                 Filter::make('out_of_stock')
                     ->query(
-                        fn (Builder $query): Builder => $query
-                            ->where('stock_quantity', 0),
+                        fn (
+                            Builder $query,
+                        ): Builder => $query
+                            ->where(
+                                'stock_quantity',
+                                0,
+                            ),
                     ),
             ])
             ->recordActions([
                 Action::make('adjustStock')
                     ->label('Adjust stock')
                     ->schema([
-                        TextInput::make('quantity_change')
+                        TextInput::make(
+                            'quantity_change',
+                        )
                             ->label('Quantity change')
-                            ->helperText('Use a positive number to add stock or a negative number to remove stock.')
+                            ->helperText(
+                                'Use a positive number to add stock '
+                                .'or a negative number to remove stock.',
+                            )
                             ->integer()
                             ->required()
                             ->notIn([0]),
@@ -107,29 +128,39 @@ class ProductsTable
                             ->required()
                             ->maxLength(1000),
                     ])
-                    ->action(function (
-                        Product $record,
-                        array $data,
-                    ): void {
-                        $user = auth()->user();
+                    ->action(
+                        function (
+                            Product $record,
+                            array $data,
+                        ): void {
+                            $user = auth()->user();
 
-                        abort_unless(
-                            $user instanceof User,
-                            403,
-                        );
+                            abort_unless(
+                                $user instanceof User,
+                                403,
+                            );
 
-                        app(AdjustInventory::class)->handle(
-                            product: $record,
-                            quantityChange: (int) $data['quantity_change'],
-                            user: $user,
-                            notes: (string) $data['notes'],
-                        );
+                            app(
+                                AdjustInventory::class,
+                            )->handle(
+                                product: $record,
+                                quantityChange: (int) $data[
+                                    'quantity_change'
+                                ],
+                                user: $user,
+                                notes: (string) $data[
+                                    'notes'
+                                ],
+                            );
 
-                        Notification::make()
-                            ->title('Inventory updated')
-                            ->success()
-                            ->send();
-                    }),
+                            Notification::make()
+                                ->title(
+                                    'Inventory updated',
+                                )
+                                ->success()
+                                ->send();
+                        },
+                    ),
 
                 EditAction::make(),
                 DeleteAction::make(),
@@ -139,6 +170,9 @@ class ProductsTable
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('updated_at', 'desc');
+            ->defaultSort(
+                'updated_at',
+                'desc',
+            );
     }
 }

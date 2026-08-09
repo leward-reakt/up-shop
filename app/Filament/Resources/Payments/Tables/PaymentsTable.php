@@ -6,6 +6,7 @@ use App\Actions\Payments\UpdatePaymentStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
+use App\Models\StoreSetting;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -18,26 +19,37 @@ class PaymentsTable
 {
     public static function configure(Table $table): Table
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $table
             ->columns([
-                TextColumn::make('order.order_number')
+                TextColumn::make(
+                    'order.order_number',
+                )
                     ->label('Order')
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('method')
                     ->formatStateUsing(
-                        fn (PaymentMethod $state): string => $state->label(),
+                        fn (
+                            PaymentMethod $state,
+                        ): string => $state->label(),
                     ),
 
                 TextColumn::make('amount')
-                    ->money('PHP', divideBy: 100)
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    )
                     ->sortable(),
 
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(
-                        fn (PaymentStatus $state): string => $state->label(),
+                        fn (
+                            PaymentStatus $state,
+                        ): string => $state->label(),
                     ),
 
                 TextColumn::make('reference')
@@ -55,10 +67,15 @@ class PaymentsTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(
-                        collect(PaymentStatus::cases())
+                        collect(
+                            PaymentStatus::cases(),
+                        )
                             ->mapWithKeys(
-                                fn (PaymentStatus $status): array => [
-                                    $status->value => $status->label(),
+                                fn (
+                                    PaymentStatus $status,
+                                ): array => [
+                                    $status->value => $status
+                                        ->label(),
                                 ],
                             )
                             ->all(),
@@ -66,10 +83,15 @@ class PaymentsTable
 
                 SelectFilter::make('method')
                     ->options(
-                        collect(PaymentMethod::cases())
+                        collect(
+                            PaymentMethod::cases(),
+                        )
                             ->mapWithKeys(
-                                fn (PaymentMethod $method): array => [
-                                    $method->value => $method->label(),
+                                fn (
+                                    PaymentMethod $method,
+                                ): array => [
+                                    $method->value => $method
+                                        ->label(),
                                 ],
                             )
                             ->all(),
@@ -83,23 +105,37 @@ class PaymentsTable
                     ->label('Mark paid')
                     ->requiresConfirmation()
                     ->visible(
-                        fn (Payment $record): bool => $record->status
+                        fn (
+                            Payment $record,
+                        ): bool => $record->status
                             === PaymentStatus::Pending,
                     )
-                    ->action(function (Payment $record): void {
-                        app(UpdatePaymentStatus::class)->handle(
-                            payment: $record,
-                            status: PaymentStatus::Paid,
-                            reference: $record->reference,
-                            notes: $record->notes,
-                        );
+                    ->action(
+                        function (
+                            Payment $record,
+                        ): void {
+                            app(
+                                UpdatePaymentStatus::class,
+                            )->handle(
+                                payment: $record,
+                                status: PaymentStatus::Paid,
+                                reference: $record
+                                    ->reference,
+                                notes: $record->notes,
+                            );
 
-                        Notification::make()
-                            ->title('Payment marked as paid')
-                            ->success()
-                            ->send();
-                    }),
+                            Notification::make()
+                                ->title(
+                                    'Payment marked as paid',
+                                )
+                                ->success()
+                                ->send();
+                        },
+                    ),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort(
+                'created_at',
+                'desc',
+            );
     }
 }

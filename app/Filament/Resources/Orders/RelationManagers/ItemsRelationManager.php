@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\RelationManagers;
 
+use App\Models\StoreSetting;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -12,6 +13,8 @@ class ItemsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $table
             ->columns([
                 TextColumn::make('product_name')
@@ -25,10 +28,16 @@ class ItemsRelationManager extends RelationManager
 
                 TextColumn::make('unit_price')
                     ->label('Unit price')
-                    ->money('PHP', divideBy: 100),
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    ),
 
                 TextColumn::make('subtotal')
-                    ->money('PHP', divideBy: 100),
+                    ->money(
+                        $currency,
+                        divideBy: 100,
+                    ),
             ])
             ->defaultSort('id');
     }

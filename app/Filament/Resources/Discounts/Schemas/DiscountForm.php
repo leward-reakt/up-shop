@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Discounts\Schemas;
 
+use App\Models\StoreSetting;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -14,6 +15,8 @@ class DiscountForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $schema
             ->components([
                 TextInput::make('code')
@@ -63,9 +66,13 @@ class DiscountForm
                             int|float|string|null $state,
                             Get $get,
                         ): int {
-                            if ($get('type') === 'fixed') {
+                            if (
+                                $get('type')
+                                === 'fixed'
+                            ) {
                                 return (int) round(
-                                    ((float) $state) * 100,
+                                    ((float) $state)
+                                    * 100,
                                 );
                             }
 
@@ -73,7 +80,11 @@ class DiscountForm
                         },
                     )
                     ->rules(
-                        fn (Get $get): array => $get('type') === 'percentage'
+                        fn (
+                            Get $get,
+                        ): array => $get(
+                            'type',
+                        ) === 'percentage'
                             ? [
                                 'integer',
                                 'min:1',
@@ -85,16 +96,21 @@ class DiscountForm
                                 'decimal:0,2',
                             ],
                     )
-                    ->helperText('Percentage uses 1–100. Fixed amounts are entered in pesos.'),
+                    ->helperText(
+                        'Percentage uses 1–100. Fixed amounts '
+                        ."are entered in {$currency}.",
+                    ),
 
                 TextInput::make('minimum_purchase')
                     ->label('Minimum purchase')
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->numeric()
                     ->minValue(0)
                     ->step(0.01)
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
                             : number_format(
                                 ((int) $state) / 100,
@@ -106,10 +122,12 @@ class DiscountForm
                     ->dehydrateStateUsing(
                         fn (
                             int|float|string|null $state,
-                        ): ?int => $state === null || $state === ''
+                        ): ?int => $state === null
+                            || $state === ''
                             ? null
                             : (int) round(
-                                ((float) $state) * 100,
+                                ((float) $state)
+                                * 100,
                             ),
                     ),
 

@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
 use App\Models\Order;
+use App\Models\StoreSetting;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -17,6 +18,8 @@ class OrderForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $currency = StoreSetting::currentCurrency();
+
         return $schema
             ->components([
                 TextInput::make('order_number')
@@ -36,12 +39,16 @@ class OrderForm
                     ->disabled()
                     ->saved(false),
 
-                TextInput::make('shipping_address_line_1')
+                TextInput::make(
+                    'shipping_address_line_1',
+                )
                     ->label('Address')
                     ->disabled()
                     ->saved(false),
 
-                TextInput::make('shipping_address_line_2')
+                TextInput::make(
+                    'shipping_address_line_2',
+                )
                     ->label('Address line 2')
                     ->disabled()
                     ->saved(false),
@@ -51,22 +58,32 @@ class OrderForm
                     ->disabled()
                     ->saved(false),
 
-                TextInput::make('shipping_province')
+                TextInput::make(
+                    'shipping_province',
+                )
                     ->label('Province')
                     ->disabled()
                     ->saved(false),
 
-                TextInput::make('shipping_postal_code')
+                TextInput::make(
+                    'shipping_postal_code',
+                )
                     ->label('Postal code')
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('shipping_method')
                     ->formatStateUsing(
-                        fn (mixed $state): string => match (true) {
-                            $state instanceof ShippingMethod => $state->label(),
-                            is_string($state) => ShippingMethod::tryFrom($state)?->label()
-                                ?? $state,
+                        fn (
+                            mixed $state,
+                        ): string => match (true) {
+                            $state instanceof ShippingMethod => $state
+                                ->label(),
+
+                            is_string($state) => ShippingMethod::tryFrom(
+                                $state,
+                            )?->label() ?? $state,
+
                             default => '',
                         },
                     )
@@ -75,72 +92,111 @@ class OrderForm
 
                 TextInput::make('subtotal')
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                            ),
                     )
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('discount_total')
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                            ),
                     )
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('shipping_total')
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                            ),
                     )
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('tax_total')
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                            ),
                     )
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('grand_total')
                     ->formatStateUsing(
-                        fn (int|string|null $state): ?string => $state === null
+                        fn (
+                            int|string|null $state,
+                        ): ?string => $state === null
                             ? null
-                            : number_format(((int) $state) / 100, 2),
+                            : number_format(
+                                ((int) $state) / 100,
+                                2,
+                            ),
                     )
-                    ->prefix('₱')
+                    ->prefix($currency)
                     ->disabled()
                     ->saved(false),
 
                 TextInput::make('payment_method')
                     ->formatStateUsing(
-                        fn (mixed $state): string => match (true) {
-                            $state instanceof PaymentMethod => $state->label(),
-                            is_string($state) => PaymentMethod::tryFrom($state)?->label()
-                                ?? $state,
+                        fn (
+                            mixed $state,
+                        ): string => match (true) {
+                            $state instanceof PaymentMethod => $state
+                                ->label(),
+
+                            is_string($state) => PaymentMethod::tryFrom(
+                                $state,
+                            )?->label() ?? $state,
+
                             default => '',
                         },
                     )
                     ->disabled()
                     ->saved(false),
 
-                TextInput::make('payment_status')
+                TextInput::make(
+                    'payment_status',
+                )
                     ->formatStateUsing(
-                        fn (mixed $state): string => match (true) {
-                            $state instanceof PaymentStatus => $state->label(),
-                            is_string($state) => PaymentStatus::tryFrom($state)?->label()
-                                ?? $state,
+                        fn (
+                            mixed $state,
+                        ): string => match (true) {
+                            $state instanceof PaymentStatus => $state
+                                ->label(),
+
+                            is_string($state) => PaymentStatus::tryFrom(
+                                $state,
+                            )?->label() ?? $state,
+
                             default => '',
                         },
                     )
@@ -150,7 +206,9 @@ class OrderForm
                 Select::make('order_status')
                     ->label('Order status')
                     ->options(
-                        function (?Order $record): array {
+                        function (
+                            ?Order $record,
+                        ): array {
                             if ($record === null) {
                                 return [];
                             }
@@ -164,11 +222,17 @@ class OrderForm
 
                             return collect($statuses)
                                 ->unique(
-                                    fn (OrderStatus $status): string => $status->value,
+                                    fn (
+                                        OrderStatus $status,
+                                    ): string => $status
+                                        ->value,
                                 )
                                 ->mapWithKeys(
-                                    fn (OrderStatus $status): array => [
-                                        $status->value => $status->label(),
+                                    fn (
+                                        OrderStatus $status,
+                                    ): array => [
+                                        $status->value => $status
+                                            ->label(),
                                     ],
                                 )
                                 ->all();
@@ -176,7 +240,9 @@ class OrderForm
                     )
                     ->required(),
 
-                Textarea::make('customer_notes')
+                Textarea::make(
+                    'customer_notes',
+                )
                     ->label('Customer notes')
                     ->rows(3)
                     ->disabled()

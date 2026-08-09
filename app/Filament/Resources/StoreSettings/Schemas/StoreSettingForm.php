@@ -3,17 +3,29 @@
 namespace App\Filament\Resources\StoreSettings\Schemas;
 
 use App\Enums\LandingPageTheme;
+use App\Models\StoreSetting;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class StoreSettingForm
 {
     public static function configure(Schema $schema): Schema
     {
+        $currencyPrefix = static function (Get $get): string {
+            $currency = $get('currency');
+
+            return StoreSetting::normalizeCurrency(
+                is_string($currency)
+                    ? $currency
+                    : null,
+            );
+        };
+
         return $schema
             ->components([
                 TextInput::make('store_name')
@@ -31,7 +43,9 @@ class StoreSettingForm
                 Select::make('landing_page_theme')
                     ->label('Storefront theme')
                     ->options(LandingPageTheme::options())
-                    ->default(LandingPageTheme::FashionEditorial->value)
+                    ->default(
+                        LandingPageTheme::FashionEditorial->value,
+                    )
                     ->required()
                     ->helperText(
                         'Fashion Elegant is the active customer-facing '
@@ -51,13 +65,22 @@ class StoreSettingForm
 
                 TextInput::make('currency')
                     ->required()
-                    ->default('PHP')
+                    ->default(StoreSetting::DEFAULT_CURRENCY)
                     ->minLength(3)
-                    ->maxLength(3),
+                    ->maxLength(3)
+                    ->rules([
+                        'regex:/^[A-Za-z]{3}$/',
+                    ])
+                    ->live()
+                    ->helperText(
+                        'Single store-wide three-letter currency code. '
+                        .'The MVP stores money in 1/100 units. Changing '
+                        .'currency does not convert existing amounts.',
+                    ),
 
                 TextInput::make('default_shipping_fee')
                     ->label('Default shipping fee')
-                    ->prefix('₱')
+                    ->prefix($currencyPrefix)
                     ->required()
                     ->numeric()
                     ->minValue(0)
@@ -82,7 +105,7 @@ class StoreSettingForm
 
                 TextInput::make('free_shipping_threshold')
                     ->label('Free shipping threshold')
-                    ->prefix('₱')
+                    ->prefix($currencyPrefix)
                     ->numeric()
                     ->minValue(0)
                     ->step(0.01)

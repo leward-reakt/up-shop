@@ -5,9 +5,11 @@ namespace App\Filament\Widgets;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Number;
 
 class AdminStatsOverview extends BaseWidget
 {
@@ -32,8 +34,13 @@ class AdminStatsOverview extends BaseWidget
      */
     protected function getStats(): array
     {
+        $currency = StoreSetting::currentCurrency();
+
         $completedRevenue = (int) Order::query()
-            ->where('order_status', OrderStatus::Completed)
+            ->where(
+                'order_status',
+                OrderStatus::Completed,
+            )
             ->sum('grand_total');
 
         return [
@@ -45,28 +52,40 @@ class AdminStatsOverview extends BaseWidget
             Stat::make(
                 'Pending orders',
                 Order::query()
-                    ->where('order_status', OrderStatus::Pending)
+                    ->where(
+                        'order_status',
+                        OrderStatus::Pending,
+                    )
                     ->count(),
             )->color('warning'),
 
             Stat::make(
                 'Processing orders',
                 Order::query()
-                    ->where('order_status', OrderStatus::Processing)
+                    ->where(
+                        'order_status',
+                        OrderStatus::Processing,
+                    )
                     ->count(),
             )->color('info'),
 
             Stat::make(
                 'Completed orders',
                 Order::query()
-                    ->where('order_status', OrderStatus::Completed)
+                    ->where(
+                        'order_status',
+                        OrderStatus::Completed,
+                    )
                     ->count(),
             )->color('success'),
 
             Stat::make(
                 'Cancelled orders',
                 Order::query()
-                    ->where('order_status', OrderStatus::Cancelled)
+                    ->where(
+                        'order_status',
+                        OrderStatus::Cancelled,
+                    )
                     ->count(),
             )->color('danger'),
 
@@ -84,9 +103,9 @@ class AdminStatsOverview extends BaseWidget
 
             Stat::make(
                 'Completed revenue',
-                '₱'.number_format(
+                Number::currency(
                     $completedRevenue / 100,
-                    2,
+                    in: $currency,
                 ),
             )->color('success'),
         ];

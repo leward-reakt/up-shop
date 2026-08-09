@@ -11,6 +11,7 @@ use App\Filament\Widgets\InventoryAlerts;
 use App\Filament\Widgets\RecentOrders;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -40,9 +41,19 @@ class AdminDashboardTest extends TestCase
             'is_active' => true,
         ]);
 
-        User::factory()->count(2)->create();
+        StoreSetting::query()->create([
+            'store_name' => 'USD Test Store',
+            'currency' => 'USD',
+            'default_shipping_fee' => 0,
+        ]);
 
-        Product::factory()->count(2)->create();
+        User::factory()
+            ->count(2)
+            ->create();
+
+        Product::factory()
+            ->count(2)
+            ->create();
 
         $this->createOrder([
             'order_number' => 'PENDING-001',
@@ -67,7 +78,7 @@ class AdminDashboardTest extends TestCase
             ->assertSee('Total customers')
             ->assertSee('Total products')
             ->assertSee('Completed revenue')
-            ->assertSee('₱1,150.00');
+            ->assertSee('$1,150.00');
     }
 
     public function test_recent_orders_widget_displays_latest_orders(): void
@@ -75,6 +86,12 @@ class AdminDashboardTest extends TestCase
         $admin = User::factory()->create([
             'is_admin' => true,
             'is_active' => true,
+        ]);
+
+        StoreSetting::query()->create([
+            'store_name' => 'USD Test Store',
+            'currency' => 'USD',
+            'default_shipping_fee' => 0,
         ]);
 
         $order = $this->createOrder([
@@ -85,7 +102,8 @@ class AdminDashboardTest extends TestCase
 
         Livewire::test(RecentOrders::class)
             ->assertSee($order->order_number)
-            ->assertSee($order->customer_name);
+            ->assertSee($order->customer_name)
+            ->assertSee('$1,150.00');
     }
 
     public function test_inventory_alerts_show_low_and_out_of_stock_products(): void
@@ -130,28 +148,38 @@ class AdminDashboardTest extends TestCase
         array $overrides = [],
     ): Order {
         return Order::query()->create([
-            'order_number' => 'TEST-'.fake()->unique()->numerify('######'),
+            'order_number' => 'TEST-'.fake()
+                ->unique()
+                ->numerify('######'),
+
             'customer_name' => 'Test Customer',
             'customer_email' => 'customer@example.com',
             'customer_phone' => '09171234567',
+
             'shipping_address_line_1' => '123 Test Street',
             'shipping_address_line_2' => null,
             'shipping_city' => 'Manila',
             'shipping_province' => 'Metro Manila',
             'shipping_postal_code' => '1000',
             'shipping_country' => 'PH',
+
             'shipping_method' => ShippingMethod::FlatRate,
+
             'discount_code' => null,
+
             'subtotal' => 100_000,
             'discount_total' => 0,
             'shipping_total' => 15_000,
             'tax_total' => 0,
             'grand_total' => 115_000,
+
             'payment_method' => PaymentMethod::BankTransfer,
             'payment_status' => PaymentStatus::Pending,
             'order_status' => OrderStatus::Pending,
+
             'customer_notes' => null,
             'admin_notes' => null,
+
             ...$overrides,
         ]);
     }
