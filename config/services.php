@@ -1,5 +1,24 @@
 <?php
 
+$paymongoAdminEnabled = (bool) env(
+    'PAYMONGO_ADMIN_ENABLED',
+    false,
+);
+
+$paymongoSecretKey = trim(
+    (string) env(
+        'PAYMONGO_SECRET_KEY',
+        '',
+    ),
+);
+
+$paymongoWebhookSecret = trim(
+    (string) env(
+        'PAYMONGO_WEBHOOK_SECRET',
+        '',
+    ),
+);
+
 return [
 
     /*
@@ -26,6 +45,23 @@ return [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
+
+    'paymongo' => [
+        'admin_enabled' => $paymongoAdminEnabled,
+
+        'secret_key' => $paymongoSecretKey,
+
+        'webhook_secret' => $paymongoWebhookSecret,
+
+        /*
+         * This is only the deployment-level gate for new PayMongo
+         * functionality. Historical webhook reconciliation must not use this
+         * value as its processing gate.
+         */
+        'available' => $paymongoAdminEnabled
+            && $paymongoSecretKey !== ''
+            && $paymongoWebhookSecret !== '',
     ],
 
     'slack' => [
