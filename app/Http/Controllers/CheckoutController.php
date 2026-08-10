@@ -76,8 +76,6 @@ class CheckoutController extends Controller
             ),
         ) ?? ShippingMethod::FlatRate;
 
-        // Store Pickup is only usable when customers can be shown a real
-        // pickup location from the single Store Settings record.
         if (
             $shippingMethod === ShippingMethod::StorePickup
             && $pickupLocation === null
@@ -221,9 +219,6 @@ class CheckoutController extends Controller
             $request,
             $placeOrder,
         ): RedirectResponse {
-            // Read the cart only after acquiring the checkout lock. A
-            // concurrent request must not retain a stale copy of a cart that
-            // another checkout request is currently consuming.
             $cartQuantities = $this->cartQuantities($request);
 
             if ($cartQuantities === []) {
@@ -239,8 +234,6 @@ class CheckoutController extends Controller
                 discountCode: $this->discountCode($request),
             );
 
-            // Guest carts live in the session, so they are cleared only after
-            // the database transaction completed successfully.
             if ($request->user() === null) {
                 $request->session()->forget('cart.items');
             }
@@ -282,7 +275,6 @@ class CheckoutController extends Controller
             ])
             ->findOrFail((int) $orderId);
 
-        // Registered orders remain private to their owner.
         if (
             $order->user_id !== null
             && $order->user_id !== $request->user()?->id
@@ -518,10 +510,7 @@ class CheckoutController extends Controller
     private function paymentMethodLabel(
         PaymentMethod $method,
     ): string {
-        return match ($method) {
-            PaymentMethod::CashOnDelivery => 'Cash on Delivery',
-            PaymentMethod::BankTransfer => 'Bank Transfer',
-        };
+        return $method->label();
     }
 
     private function statusLabel(string $status): string

@@ -107,7 +107,10 @@ class CheckoutRequest extends FormRequest
 
             'payment_method' => [
                 'required',
-                Rule::enum(PaymentMethod::class),
+                Rule::in([
+                    PaymentMethod::CashOnDelivery->value,
+                    PaymentMethod::BankTransfer->value,
+                ]),
             ],
 
             'customer_notes' => [
