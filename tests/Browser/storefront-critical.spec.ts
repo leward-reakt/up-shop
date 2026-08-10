@@ -93,7 +93,7 @@ test('primary navigation and shop work at the configured viewport', async ({
 
 test('product can move through cart to checkout in the browser', async ({
     page,
-}) => {
+}, testInfo) => {
     await page.goto(`/products/${product.slug}`);
 
     await expect(
@@ -176,6 +176,87 @@ test('product can move through cart to checkout in the browser', async ({
     ).toBeVisible();
 
     await expectNoHorizontalOverflow(page);
+
+    // Keep responsive product/cart/checkout coverage on every configured
+    // viewport, but create only one order for this browser-level happy path.
+    if (testInfo.project.name !== 'desktop-chromium') {
+        return;
+    }
+
+    await page
+        .getByLabel('Full name', {
+            exact: true,
+        })
+        .fill('Playwright Guest');
+
+    await page
+        .getByLabel('Email', {
+            exact: true,
+        })
+        .fill('playwright.guest@example.com');
+
+    await page
+        .getByLabel('Mobile number', {
+            exact: true,
+        })
+        .fill('09171234567');
+
+    await page
+        .getByLabel('Address', {
+            exact: true,
+        })
+        .fill('123 Browser Test Street');
+
+    await page
+        .getByLabel('City / Municipality', {
+            exact: true,
+        })
+        .fill('Makati');
+
+    await page
+        .getByLabel('Province', {
+            exact: true,
+        })
+        .fill('Metro Manila');
+
+    await page
+        .getByLabel('Postal code', {
+            exact: true,
+        })
+        .fill('1200');
+
+    await page
+        .locator(
+            'input[name="payment_method"][value="cash_on_delivery"]',
+        )
+        .check();
+
+    await page
+        .getByRole('button', {
+            name: 'Place order',
+        })
+        .click();
+
+    await expect(page).toHaveURL(/\/checkout\/success$/);
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Thank you, Playwright Guest.',
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByRole('heading', {
+            name: 'Cash on Delivery',
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await expect(
+        page.getByText(product.name, {
+            exact: true,
+        }),
+    ).toBeVisible();
 });
 
 test('customer can sign in and navigate the account area', async ({ page }) => {
