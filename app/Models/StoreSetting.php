@@ -16,6 +16,7 @@ class StoreSetting extends Model
         'contact_number',
         'business_address',
         'bank_transfer_instructions',
+        'paymongo_enabled',
         'currency',
         'default_shipping_fee',
         'free_shipping_threshold',
@@ -70,6 +71,22 @@ class StoreSetting extends Model
             : $instructions;
     }
 
+    public static function payMongoAvailableForNewCheckout(): bool
+    {
+        if (! (bool) config('services.paymongo.available', false)) {
+            return false;
+        }
+
+        $settings = static::query()->first();
+
+        if (! $settings instanceof self) {
+            return false;
+        }
+
+        return $settings->paymongo_enabled
+            && $settings->currencyCode() === self::DEFAULT_CURRENCY;
+    }
+
     public static function normalizeCurrency(
         ?string $currency,
     ): string {
@@ -114,6 +131,7 @@ class StoreSetting extends Model
     protected function casts(): array
     {
         return [
+            'paymongo_enabled' => 'boolean',
             'default_shipping_fee' => 'integer',
             'free_shipping_threshold' => 'integer',
             'tax_rate_basis_points' => 'integer',

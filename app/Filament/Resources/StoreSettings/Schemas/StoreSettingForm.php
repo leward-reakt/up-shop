@@ -11,6 +11,7 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
@@ -76,6 +77,45 @@ class StoreSettingForm
                         .'customer payment instructions required by the store.',
                     )
                     ->columnSpanFull(),
+
+                Toggle::make('paymongo_enabled')
+                    ->label('Enable PayMongo')
+                    ->default(false)
+                    ->disabled(
+                        fn (): bool => ! (bool) config(
+                            'services.paymongo.admin_enabled',
+                            false,
+                        ),
+                    )
+                    ->helperText(
+                        function (): string {
+                            if (
+                                ! (bool) config(
+                                    'services.paymongo.admin_enabled',
+                                    false,
+                                )
+                            ) {
+                                return 'PayMongo store control is locked by '
+                                    .'the deployment configuration.';
+                            }
+
+                            if (
+                                ! (bool) config(
+                                    'services.paymongo.available',
+                                    false,
+                                )
+                            ) {
+                                return 'PayMongo credentials are incomplete. '
+                                    .'The setting may be prepared, but new '
+                                    .'PayMongo checkouts will remain unavailable.';
+                            }
+
+                            return 'Allows PayMongo for new checkouts when '
+                                .'the store currency is PHP. Historical '
+                                .'payment processing is not controlled by '
+                                .'this setting.';
+                        },
+                    ),
 
                 TextInput::make('currency')
                     ->required()
