@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Orders\CalculateCheckoutTotals;
 use App\Actions\Orders\PlaceOrder;
+use App\Actions\Payments\CreatePayMongoCheckoutSession;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingMethod;
@@ -18,9 +19,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Throwable;
 
 class CheckoutController extends Controller
 {
@@ -33,6 +37,18 @@ class CheckoutController extends Controller
         $cartQuantities = $this->cartQuantities($request);
 
         if ($cartQuantities === []) {
+            $pendingOrder = $this->pendingPayMongoOrder(
+                $request,
+            );
+
+            if ($pendingOrder !== null) {
+                return redirect()->to(
+                    $this->signedPaymentStatusUrl(
+                        $pendingOrder,
+                    ),
+                );
+            }
+
             return to_route('cart.index')
                 ->withErrors([
                     'cart' => 'Your cart is empty.',
@@ -149,6 +165,18 @@ class CheckoutController extends Controller
             ];
         }
 
+        if (StoreSetting::payMongoAvailableForNewCheckout()) {
+            $paymentOptions[] = [
+                'value' => PaymentMethod::GCash->value,
+                'label' => PaymentMethod::GCash->label(),
+            ];
+
+            $paymentOptions[] = [
+                'value' => PaymentMethod::Maya->value,
+                'label' => PaymentMethod::Maya->label(),
+            ];
+        }
+
         return Inertia::render('checkout/index', [
             'items' => $items
                 ->map(
@@ -211,14 +239,16 @@ class CheckoutController extends Controller
     public function store(
         CheckoutRequest $request,
         PlaceOrder $placeOrder,
-    ): RedirectResponse {
+        CreatePayMongoCheckoutSession $createPayMongoCheckoutSession,
+    ): SymfonyResponse {
         $response = Cache::lock(
             $this->checkoutLockKey($request),
             self::CHECKOUT_LOCK_SECONDS,
         )->get(function () use (
             $request,
             $placeOrder,
-        ): RedirectResponse {
+            $createPayMongoCheckoutSession,
+        ): SymfonyResponse {
             $cartQuantities = $this->cartQuantities($request);
 
             if ($cartQuantities === []) {
@@ -227,6 +257,8 @@ class CheckoutController extends Controller
                 ]);
             }
 
+            // The complete order/inventory/payment persistence transaction
+            // remains owned by PlaceOrder.
             $order = $placeOrder->handle(
                 user: $request->user(),
                 cartQuantities: $cartQuantities,
@@ -238,17 +270,46 @@ class CheckoutController extends Controller
                 $request->session()->forget('cart.items');
             }
 
-            $request->session()->forget('cart.discount_code');
+            $request->session()->forget(
+                'cart.discount_code',
+            );
 
             $request->session()->put(
                 'checkout.order_id',
                 $order->id,
             );
 
-            return to_route('checkout.success');
+            if (! $order->payment_method->usesPayMongo()) {
+                return to_route('checkout.success');
+            }
+
+            // This provider call happens only after PlaceOrder's DB
+            // transaction has successfully committed.
+            try {
+                $checkoutSession =
+                    $createPayMongoCheckoutSession->handle(
+                        $order,
+                    );
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return redirect()
+                    ->to(
+                        $this->signedPaymentStatusUrl(
+                            $order,
+                        ),
+                    )
+                    ->withErrors([
+                        'payment' => 'Your order was created, but we could not start the online payment. You can resume payment from this page.',
+                    ]);
+            }
+
+            return Inertia::location(
+                $checkoutSession['checkout_url'],
+            );
         });
 
-        if (! $response instanceof RedirectResponse) {
+        if (! $response instanceof SymfonyResponse) {
             throw ValidationException::withMessages([
                 'cart' => 'Your order is already being processed. Please wait a moment before trying again.',
             ]);
@@ -257,8 +318,9 @@ class CheckoutController extends Controller
         return $response;
     }
 
-    public function success(Request $request): Response
-    {
+    public function success(
+        Request $request,
+    ): Response|RedirectResponse {
         $orderId = $request->session()->get(
             'checkout.order_id',
         );
@@ -280,6 +342,14 @@ class CheckoutController extends Controller
             && $order->user_id !== $request->user()?->id
         ) {
             abort(403);
+        }
+
+        if ($order->payment_method->usesPayMongo()) {
+            return redirect()->to(
+                $this->signedPaymentStatusUrl(
+                    $order,
+                ),
+            );
         }
 
         $bankTransferInstructions = (
@@ -317,9 +387,7 @@ class CheckoutController extends Controller
                 'shipping_method_label' => $order->shipping_method->label(),
 
                 'payment_method' => $order->payment_method->value,
-                'payment_method_label' => $this->paymentMethodLabel(
-                    $order->payment_method,
-                ),
+                'payment_method_label' => $order->payment_method->label(),
 
                 'payment_status' => $order->payment_status->value,
                 'payment_status_label' => $this->statusLabel(
@@ -381,7 +449,9 @@ class CheckoutController extends Controller
                 $quantity = (int) $cartItem->quantity;
 
                 if ($quantity > 0) {
-                    $quantities[(int) $cartItem->product_id] = $quantity;
+                    $quantities[
+                        (int) $cartItem->product_id
+                    ] = $quantity;
                 }
             }
 
@@ -496,9 +566,12 @@ class CheckoutController extends Controller
             : $discountCode;
     }
 
-    private function checkoutLockKey(Request $request): string
-    {
-        $userId = $request->user()?->getAuthIdentifier();
+    private function checkoutLockKey(
+        Request $request,
+    ): string {
+        $userId = $request
+            ->user()
+            ?->getAuthIdentifier();
 
         $scope = $userId === null
             ? 'session:'.$request->session()->getId()
@@ -507,14 +580,55 @@ class CheckoutController extends Controller
         return 'checkout:place-order:'.$scope;
     }
 
-    private function paymentMethodLabel(
-        PaymentMethod $method,
-    ): string {
-        return $method->label();
+    private function pendingPayMongoOrder(
+        Request $request,
+    ): ?Order {
+        $orderId = $request->session()->get(
+            'checkout.order_id',
+        );
+
+        if (! is_numeric($orderId)) {
+            return null;
+        }
+
+        $order = Order::query()
+            ->find((int) $orderId);
+
+        if ($order === null) {
+            return null;
+        }
+
+        if (
+            $order->user_id !== null
+            && $order->user_id !== $request->user()?->id
+        ) {
+            return null;
+        }
+
+        if (
+            ! $order->payment_method->usesPayMongo()
+            || $order->payment_status !== PaymentStatus::Pending
+        ) {
+            return null;
+        }
+
+        return $order;
     }
 
-    private function statusLabel(string $status): string
-    {
+    private function signedPaymentStatusUrl(
+        Order $order,
+    ): string {
+        return URL::signedRoute(
+            'checkout.payment.show',
+            [
+                'order' => $order->order_number,
+            ],
+        );
+    }
+
+    private function statusLabel(
+        string $status,
+    ): string {
         return ucwords(
             str_replace('_', ' ', $status),
         );

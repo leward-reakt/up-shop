@@ -4,15 +4,15 @@ namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
 use App\Enums\ShippingMethod;
-use Illuminate\Database\Query\Builder;
+use App\Models\StoreSetting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class CheckoutRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Guest checkout is part of the approved MVP.
         return true;
     }
 
@@ -23,79 +23,56 @@ class CheckoutRequest extends FormRequest
     {
         $user = $this->user();
 
-        $hasSavedAddresses = $user !== null
-            && $user->addresses()->exists();
-
-        $shippingAddressIdRules = [
-            'nullable',
-        ];
-
-        if ($hasSavedAddresses) {
-            $shippingAddressIdRules = [
-                'required',
-                'integer',
-                Rule::exists('addresses', 'id')->where(
-                    fn (Builder $query): Builder => $query
-                        ->where('user_id', $user->id),
-                ),
-            ];
-        }
-
-        $requiredContactRule = $hasSavedAddresses
-            ? 'nullable'
-            : 'required';
-
-        $requiredAddressRule = $hasSavedAddresses
-            ? 'nullable'
-            : 'required';
-
         return [
             'customer_name' => [
-                $requiredContactRule,
+                'required',
                 'string',
                 'max:255',
             ],
-
             'customer_email' => [
-                $requiredContactRule,
-                'email:rfc',
+                'required',
+                'email',
                 'max:255',
             ],
-
             'customer_phone' => [
-                $requiredContactRule,
+                'required',
                 'string',
                 'max:50',
             ],
 
-            'shipping_address_id' => $shippingAddressIdRules,
+            'shipping_address_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('addresses', 'id')->where(
+                    fn ($query) => $query->where(
+                        'user_id',
+                        $user?->id ?? 0,
+                    ),
+                ),
+            ],
 
             'shipping_address_line_1' => [
-                $requiredAddressRule,
+                'required',
                 'string',
                 'max:255',
             ],
-
             'shipping_address_line_2' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
-
             'shipping_city' => [
-                $requiredAddressRule,
+                'required',
                 'string',
                 'max:255',
             ],
-
             'shipping_province' => [
-                $requiredAddressRule,
+                'required',
                 'string',
                 'max:255',
             ],
-
             'shipping_postal_code' => [
-                $requiredAddressRule,
+                'required',
                 'string',
                 'max:20',
             ],
@@ -107,10 +84,7 @@ class CheckoutRequest extends FormRequest
 
             'payment_method' => [
                 'required',
-                Rule::in([
-                    PaymentMethod::CashOnDelivery->value,
-                    PaymentMethod::BankTransfer->value,
-                ]),
+                Rule::enum(PaymentMethod::class),
             ],
 
             'customer_notes' => [
@@ -119,5 +93,26 @@ class CheckoutRequest extends FormRequest
                 'max:2000',
             ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(
+            function (Validator $validator): void {
+                $paymentMethod = PaymentMethod::tryFrom(
+                    (string) $this->input('payment_method'),
+                );
+
+                if (
+                    $paymentMethod?->usesPayMongo() === true
+                    && ! StoreSetting::payMongoAvailableForNewCheckout()
+                ) {
+                    $validator->errors()->add(
+                        'payment_method',
+                        'GCash and Maya are currently unavailable.',
+                    );
+                }
+            },
+        );
     }
 }

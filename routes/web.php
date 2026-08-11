@@ -7,6 +7,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContentPageController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PayMongoPaymentController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ShopController;
 use App\Models\Page;
@@ -80,6 +81,34 @@ Route::get(
     '/checkout/success',
     [CheckoutController::class, 'success'],
 )->name('checkout.success');
+
+Route::get(
+    '/checkout/payment/{order:order_number}',
+    [PayMongoPaymentController::class, 'show'],
+)
+    ->middleware('signed')
+    ->name('checkout.payment.show');
+
+Route::get(
+    '/checkout/payment/{order:order_number}/success',
+    [PayMongoPaymentController::class, 'success'],
+)
+    ->middleware('signed')
+    ->name('checkout.payment.success');
+
+Route::get(
+    '/checkout/payment/{order:order_number}/cancelled',
+    [PayMongoPaymentController::class, 'cancelled'],
+)
+    ->middleware('signed')
+    ->name('checkout.payment.cancelled');
+
+Route::post(
+    '/checkout/payment/{order:order_number}/resume',
+    [PayMongoPaymentController::class, 'resume'],
+)
+    ->middleware('throttle:checkout')
+    ->name('checkout.payment.resume');
 
 Route::middleware([
     'auth',
