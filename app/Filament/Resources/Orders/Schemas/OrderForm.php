@@ -218,6 +218,105 @@ class OrderForm
                     ->disabled()
                     ->saved(false),
 
+                TextInput::make('payment_amount')
+                    ->label('Payment amount')
+                    ->formatStateUsing(
+                        fn (
+                            mixed $state,
+                            ?Order $record,
+                        ): ?string => $record?->payment === null
+                            ? null
+                            : number_format(
+                                ((int) $record->payment->amount) / 100,
+                                2,
+                            ),
+                    )
+                    ->prefix($currency)
+                    ->disabled()
+                    ->saved(false),
+
+                TextInput::make(
+                    'paymongo_checkout_reference',
+                )
+                    ->label('PayMongo Checkout Reference')
+                    ->formatStateUsing(
+                        fn (
+                            mixed $state,
+                            ?Order $record,
+                        ): ?string => $record?->payment?->provider_checkout_id,
+                    )
+                    ->placeholder('Not available')
+                    ->disabled()
+                    ->saved(false)
+                    ->visible(
+                        fn (?Order $record): bool => $record?->payment_method
+                            ?->usesPayMongo() ?? false,
+                    ),
+
+                TextInput::make(
+                    'paymongo_payment_reference',
+                )
+                    ->label('PayMongo Payment Reference')
+                    ->formatStateUsing(
+                        fn (
+                            mixed $state,
+                            ?Order $record,
+                        ): ?string => $record?->payment?->reference,
+                    )
+                    ->placeholder('Not paid yet')
+                    ->disabled()
+                    ->saved(false)
+                    ->visible(
+                        fn (?Order $record): bool => $record?->payment_method
+                            ?->usesPayMongo() ?? false,
+                    ),
+
+                TextInput::make('payment_paid_at')
+                    ->label('Paid at')
+                    ->formatStateUsing(
+                        fn (
+                            mixed $state,
+                            ?Order $record,
+                        ): ?string => $record?->payment?->paid_at
+                            ?->format('Y-m-d H:i:s'),
+                    )
+                    ->placeholder('Not paid yet')
+                    ->disabled()
+                    ->saved(false),
+
+                TextInput::make('refund_reference')
+                    ->label('Refund Reference')
+                    ->formatStateUsing(
+                        fn (
+                            mixed $state,
+                            ?Order $record,
+                        ): ?string => $record?->payment?->refund_reference,
+                    )
+                    ->placeholder('Not refunded')
+                    ->disabled()
+                    ->saved(false)
+                    ->visible(
+                        fn (?Order $record): bool => $record?->payment_method
+                            ?->usesPayMongo() ?? false,
+                    ),
+
+                TextInput::make('payment_refunded_at')
+                    ->label('Refunded at')
+                    ->formatStateUsing(
+                        fn (
+                            mixed $state,
+                            ?Order $record,
+                        ): ?string => $record?->payment?->refunded_at
+                            ?->format('Y-m-d H:i:s'),
+                    )
+                    ->placeholder('Not refunded')
+                    ->disabled()
+                    ->saved(false)
+                    ->visible(
+                        fn (?Order $record): bool => $record?->payment_method
+                            ?->usesPayMongo() ?? false,
+                    ),
+
                 Select::make('order_status')
                     ->label('Order status')
                     ->options(
