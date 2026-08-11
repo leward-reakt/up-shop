@@ -34,6 +34,12 @@ class UpdatePaymentStatus
                     ->lockForUpdate()
                     ->findOrFail($payment->id);
 
+                if ($lockedPayment->isPayMongoManaged()) {
+                    throw ValidationException::withMessages([
+                        'status' => 'PayMongo payment status is managed automatically from verified provider reconciliation.',
+                    ]);
+                }
+
                 $statusChanged = $lockedPayment->status !== $status;
 
                 if ($statusChanged) {
@@ -127,6 +133,10 @@ class UpdatePaymentStatus
     public static function allowedNextStatuses(
         Payment $payment,
     ): array {
+        if ($payment->isPayMongoManaged()) {
+            return [];
+        }
+
         return match ($payment->status) {
             PaymentStatus::Pending => [
                 PaymentStatus::Paid,

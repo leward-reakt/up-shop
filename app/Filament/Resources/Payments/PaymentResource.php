@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class PaymentResource extends Resource
 {
@@ -42,5 +43,17 @@ class PaymentResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        if (
+            $record instanceof Payment
+            && $record->isPayMongoManaged()
+        ) {
+            return false;
+        }
+
+        return parent::canEdit($record);
     }
 }

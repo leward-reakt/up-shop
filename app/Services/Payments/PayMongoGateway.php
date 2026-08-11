@@ -245,7 +245,121 @@ class PayMongoGateway
         ];
     }
 
+    public function expireCheckoutSession(
+        string $checkoutId,
+    ): void {
+        $checkoutId = trim($checkoutId);
+
+        if ($checkoutId === '') {
+            throw new InvalidArgumentException(
+                'PayMongo Checkout Session ID is required.',
+            );
+        }
+
+        $response = $this
+            ->request()
+            ->post(
+                '/v1/checkout_sessions/'
+                .rawurlencode($checkoutId)
+                .'/expire',
+            );
+
+        $response->throw();
+    }
+
+    public function webhookLiveMode(): bool
+    {
+        $secretKey = $this->secretKey();
+
+        if (str_starts_with($secretKey, 'sk_live_')) {
+            return true;
+        }
+
+        if (str_starts_with($secretKey, 'sk_test_')) {
+            return false;
+        }
+
+        throw new LogicException(
+            'PayMongo secret key does not identify test or live mode.',
+        );
+    }
+
+    public function verifyWebhookSignature(
+        string $rawPayload,
+        string $signatureHeader,
+        bool $liveMode,
+    ): bool {
+        if ($rawPayload === '') {
+            return false;
+        }
+
+        $webhookSecret = config(
+            'services.paymongo.webhook_secret',
+        );
+
+        if (
+            ! is_string($webhookSecret)
+            || trim($webhookSecret) === ''
+        ) {
+            throw new LogicException(
+                'PayMongo webhook secret is not configured.',
+            );
+        }
+
+        $signatureParts = [];
+
+        foreach (explode(',', $signatureHeader) as $part) {
+            $pair = explode('=', trim($part), 2);
+
+            if (count($pair) !== 2) {
+                continue;
+            }
+
+            [$key, $value] = $pair;
+
+            $signatureParts[trim($key)] = trim($value);
+        }
+
+        $timestamp = $signatureParts['t'] ?? null;
+        $providedSignature = $signatureParts[
+            $liveMode ? 'li' : 'te'
+        ] ?? null;
+
+        if (
+            ! is_string($timestamp)
+            || ! ctype_digit($timestamp)
+            || ! is_string($providedSignature)
+            || $providedSignature === ''
+        ) {
+            return false;
+        }
+
+        $expectedSignature = hash_hmac(
+            'sha256',
+            $timestamp.'.'.$rawPayload,
+            trim($webhookSecret),
+        );
+
+        return hash_equals(
+            $expectedSignature,
+            $providedSignature,
+        );
+    }
+
     private function request(): PendingRequest
+    {
+        return Http::baseUrl(self::BASE_URL)
+            ->withBasicAuth(
+                $this->secretKey(),
+                '',
+            )
+            ->acceptJson()
+            ->asJson()
+            ->connectTimeout(5)
+            ->timeout(15);
+    }
+
+    private function secretKey(): string
     {
         $secretKey = config(
             'services.paymongo.secret_key',
@@ -260,15 +374,7 @@ class PayMongoGateway
             );
         }
 
-        return Http::baseUrl(self::BASE_URL)
-            ->withBasicAuth(
-                trim($secretKey),
-                '',
-            )
-            ->acceptJson()
-            ->asJson()
-            ->connectTimeout(5)
-            ->timeout(15);
+        return trim($secretKey);
     }
 
     private function providerPaymentMethod(

@@ -8,6 +8,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContentPageController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PayMongoPaymentController;
+use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ShopController;
 use App\Models\Page;
@@ -81,6 +82,11 @@ Route::get(
     '/checkout/success',
     [CheckoutController::class, 'success'],
 )->name('checkout.success');
+
+Route::post(
+    '/webhooks/paymongo',
+    PayMongoWebhookController::class,
+)->name('webhooks.paymongo');
 
 Route::get(
     '/checkout/payment/{order:order_number}',

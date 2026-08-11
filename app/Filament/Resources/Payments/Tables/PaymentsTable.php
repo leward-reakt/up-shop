@@ -53,7 +53,8 @@ class PaymentsTable
                     ),
 
                 TextColumn::make('reference')
-                    ->searchable(),
+                    ->searchable()
+                    ->placeholder('—'),
 
                 TextColumn::make('paid_at')
                     ->dateTime()
@@ -99,7 +100,14 @@ class PaymentsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
+
+                EditAction::make()
+                    ->visible(
+                        fn (
+                            Payment $record,
+                        ): bool => ! $record
+                            ->isPayMongoManaged(),
+                    ),
 
                 Action::make('markPaid')
                     ->label('Mark paid')
@@ -107,8 +115,11 @@ class PaymentsTable
                     ->visible(
                         fn (
                             Payment $record,
-                        ): bool => $record->status
-                            === PaymentStatus::Pending,
+                        ): bool => (
+                            $record->status
+                                === PaymentStatus::Pending
+                            && ! $record->isPayMongoManaged()
+                        ),
                     )
                     ->action(
                         function (
