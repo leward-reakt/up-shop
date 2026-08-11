@@ -72,20 +72,18 @@ class PayMongoOrderCancellationTest extends TestCase
         ]);
 
         Http::fake([
-            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' =>
-                Http::response(
-                    $this->retrievedCheckoutSessionResponse(
-                        $order,
-                        status: 'active',
-                    ),
-                    200,
+            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' => Http::response(
+                $this->retrievedCheckoutSessionResponse(
+                    $order,
+                    status: 'active',
                 ),
+                200,
+            ),
 
-            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test/expire' =>
-                Http::response(
-                    $this->expiredCheckoutSessionResponse(),
-                    200,
-                ),
+            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test/expire' => Http::response(
+                $this->expiredCheckoutSessionResponse(),
+                200,
+            ),
         ]);
 
         $actor = User::factory()->create();
@@ -117,8 +115,7 @@ class PayMongoOrderCancellationTest extends TestCase
         );
 
         Http::assertSent(
-            fn (ClientRequest $request): bool =>
-                $request->url()
+            fn (ClientRequest $request): bool => $request->url()
                     === 'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test/expire'
                 && $request->method() === 'POST',
         );
@@ -131,15 +128,14 @@ class PayMongoOrderCancellationTest extends TestCase
         );
 
         Http::fake([
-            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' =>
-                Http::response(
-                    $this->retrievedCheckoutSessionResponse(
-                        $order,
-                        status: 'active',
-                        hasPaidPayment: true,
-                    ),
-                    200,
+            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' => Http::response(
+                $this->retrievedCheckoutSessionResponse(
+                    $order,
+                    status: 'active',
+                    hasPaidPayment: true,
                 ),
+                200,
+            ),
         ]);
 
         $actor = User::factory()->create();
@@ -180,11 +176,10 @@ class PayMongoOrderCancellationTest extends TestCase
         );
 
         Http::assertNotSent(
-            fn (ClientRequest $request): bool =>
-                str_ends_with(
-                    $request->url(),
-                    '/expire',
-                ),
+            fn (ClientRequest $request): bool => str_ends_with(
+                $request->url(),
+                '/expire',
+            ),
         );
     }
 
@@ -255,18 +250,17 @@ class PayMongoOrderCancellationTest extends TestCase
         );
 
         Http::fake([
-            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' =>
-                Http::response(
-                    [
-                        'errors' => [
-                            [
-                                'code' => 'provider_error',
-                                'detail' => 'Temporary failure.',
-                            ],
+            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' => Http::response(
+                [
+                    'errors' => [
+                        [
+                            'code' => 'provider_error',
+                            'detail' => 'Temporary failure.',
                         ],
                     ],
-                    500,
-                ),
+                ],
+                500,
+            ),
         ]);
 
         $actor = User::factory()->create();
@@ -314,14 +308,13 @@ class PayMongoOrderCancellationTest extends TestCase
         );
 
         Http::fake([
-            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' =>
-                Http::response(
-                    $this->retrievedCheckoutSessionResponse(
-                        $order,
-                        status: 'expired',
-                    ),
-                    200,
+            'https://api.paymongo.com/v1/checkout_sessions/cs_cancel_test' => Http::response(
+                $this->retrievedCheckoutSessionResponse(
+                    $order,
+                    status: 'expired',
                 ),
+                200,
+            ),
         ]);
 
         $actor = User::factory()->create();
@@ -389,11 +382,10 @@ class PayMongoOrderCancellationTest extends TestCase
     ): array {
         if ($paymentMethod->usesPayMongo()) {
             Http::fake([
-                'https://api.paymongo.com/v2/checkout_sessions' =>
-                    Http::response(
-                        $this->checkoutSessionResponse(),
-                        200,
-                    ),
+                'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                    $this->checkoutSessionResponse(),
+                    200,
+                ),
             ]);
         } else {
             Http::fake();

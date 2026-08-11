@@ -181,19 +181,18 @@ class PayMongoAdminVisibilityTest extends TestCase
     ): Payment {
         if ($paymentMethod->usesPayMongo()) {
             Http::fake([
-                'https://api.paymongo.com/v2/checkout_sessions' =>
-                    Http::response(
-                        [
-                            'data' => [
-                                'id' => 'cs_admin_test',
-                                'type' => 'checkout_session',
-                                'attributes' => [
-                                    'checkout_url' => 'https://checkout.paymongo.com/cs_admin_test',
-                                ],
+                'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                    [
+                        'data' => [
+                            'id' => 'cs_admin_test',
+                            'type' => 'checkout_session',
+                            'attributes' => [
+                                'checkout_url' => 'https://checkout.paymongo.com/cs_admin_test',
                             ],
                         ],
-                        200,
-                    ),
+                    ],
+                    200,
+                ),
             ]);
         } else {
             Http::fake();

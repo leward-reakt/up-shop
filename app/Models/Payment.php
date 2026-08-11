@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $reference
  * @property Carbon|null $paid_at
  * @property Carbon|null $failed_at
+ * @property string|null $refund_reference
+ * @property Carbon|null $refunded_at
  * @property array<string, mixed>|null $metadata
  * @property string|null $notes
  */
@@ -38,6 +40,8 @@ class Payment extends Model
         'reference',
         'paid_at',
         'failed_at',
+        'refund_reference',
+        'refunded_at',
         'metadata',
         'notes',
     ];
@@ -48,6 +52,12 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function isPayMongoManaged(): bool
+    {
+        return $this->provider === 'paymongo'
+            || $this->method->usesPayMongo();
     }
 
     /**
@@ -61,6 +71,7 @@ class Payment extends Model
             'amount' => 'integer',
             'paid_at' => 'datetime',
             'failed_at' => 'datetime',
+            'refunded_at' => 'datetime',
             'metadata' => 'array',
         ];
     }

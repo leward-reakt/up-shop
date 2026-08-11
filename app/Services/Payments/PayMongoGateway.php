@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 
 use App\Enums\PaymentMethod;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use LogicException;
@@ -12,6 +13,8 @@ use UnexpectedValueException;
 class PayMongoGateway
 {
     private const BASE_URL = 'https://api.paymongo.com';
+
+    private const REFUNDS_PATH = '/refunds';
 
     /**
      * @return array{
@@ -66,16 +69,7 @@ class PayMongoGateway
             'cancel URL',
         );
 
-        $idempotencyKey = trim($idempotencyKey);
-
-        if (
-            $idempotencyKey === ''
-            || strlen($idempotencyKey) > 255
-        ) {
-            throw new InvalidArgumentException(
-                'PayMongo idempotency key must contain 1 to 255 characters.',
-            );
-        }
+        $this->assertIdempotencyKey($idempotencyKey);
 
         $response = $this
             ->request()
@@ -267,6 +261,107 @@ class PayMongoGateway
         $response->throw();
     }
 
+    /**
+     * @return array{
+     *     id: string,
+     *     payment_id: string,
+     *     amount: int,
+     *     currency: string,
+     *     status: string
+     * }
+     */
+    public function refundPayment(
+        string $paymentId,
+        int $amount,
+        string $idempotencyKey,
+        ?string $notes = null,
+    ): array {
+        $paymentId = trim($paymentId);
+
+        if ($paymentId === '') {
+            throw new InvalidArgumentException(
+                'PayMongo Payment ID is required.',
+            );
+        }
+
+        if ($amount <= 0) {
+            throw new InvalidArgumentException(
+                'PayMongo refund amount must be greater than zero.',
+            );
+        }
+
+        $this->assertIdempotencyKey($idempotencyKey);
+
+        $notes = $notes === null
+            ? null
+            : trim($notes);
+
+        if ($notes !== null && strlen($notes) > 255) {
+            throw new InvalidArgumentException(
+                'PayMongo refund notes may not exceed 255 characters.',
+            );
+        }
+
+        $attributes = [
+            'amount' => $amount,
+            'payment_id' => $paymentId,
+            'reason' => 'others',
+        ];
+
+        if ($notes !== null && $notes !== '') {
+            $attributes['notes'] = $notes;
+        }
+
+        $response = $this
+            ->request()
+            ->withHeaders([
+                'Idempotency-Key' => $idempotencyKey,
+            ])
+            ->post(
+                self::REFUNDS_PATH,
+                [
+                    'data' => [
+                        'attributes' => $attributes,
+                    ],
+                ],
+            );
+
+        $response->throw();
+
+        return $this->normalizeRefundResponse($response);
+    }
+
+    /**
+     * @return array{
+     *     id: string,
+     *     payment_id: string,
+     *     amount: int,
+     *     currency: string,
+     *     status: string
+     * }
+     */
+    public function retrieveRefund(
+        string $refundId,
+    ): array {
+        $refundId = trim($refundId);
+
+        if ($refundId === '') {
+            throw new InvalidArgumentException(
+                'PayMongo Refund ID is required.',
+            );
+        }
+
+        $response = $this
+            ->request()
+            ->get(
+                self::REFUNDS_PATH.'/'.rawurlencode($refundId),
+            );
+
+        $response->throw();
+
+        return $this->normalizeRefundResponse($response);
+    }
+
     public function webhookLiveMode(): bool
     {
         $secretKey = $this->secretKey();
@@ -346,6 +441,71 @@ class PayMongoGateway
         );
     }
 
+    /**
+     * @return array{
+     *     id: string,
+     *     payment_id: string,
+     *     amount: int,
+     *     currency: string,
+     *     status: string
+     * }
+     */
+    private function normalizeRefundResponse(
+        Response $response,
+    ): array {
+        $id = $response->json('data.id');
+        $type = $response->json('data.type');
+        $paymentId = $response->json(
+            'data.attributes.payment_id',
+        );
+        $amount = $this->integerValue(
+            $response->json(
+                'data.attributes.amount',
+            ),
+            'PayMongo refund amount',
+        );
+        $currency = $response->json(
+            'data.attributes.currency',
+        );
+        $status = $response->json(
+            'data.attributes.status',
+        );
+
+        if (
+            ! is_string($id)
+            || trim($id) === ''
+            || ($type !== null && $type !== 'refund')
+            || ! is_string($paymentId)
+            || trim($paymentId) === ''
+            || $amount <= 0
+            || ! is_string($currency)
+            || strtoupper(trim($currency)) !== 'PHP'
+            || ! is_string($status)
+            || ! in_array(
+                $status,
+                [
+                    'pending',
+                    'processing',
+                    'succeeded',
+                    'failed',
+                ],
+                true,
+            )
+        ) {
+            throw new UnexpectedValueException(
+                'PayMongo returned an invalid Refund resource.',
+            );
+        }
+
+        return [
+            'id' => trim($id),
+            'payment_id' => trim($paymentId),
+            'amount' => $amount,
+            'currency' => strtoupper(trim($currency)),
+            'status' => $status,
+        ];
+    }
+
     private function request(): PendingRequest
     {
         return Http::baseUrl(self::BASE_URL)
@@ -388,6 +548,41 @@ class PayMongoGateway
                 'The selected payment method is not handled by PayMongo.',
             ),
         };
+    }
+
+    private function assertIdempotencyKey(
+        string $idempotencyKey,
+    ): void {
+        $idempotencyKey = trim($idempotencyKey);
+
+        if (
+            $idempotencyKey === ''
+            || strlen($idempotencyKey) > 255
+        ) {
+            throw new InvalidArgumentException(
+                'PayMongo idempotency key must contain 1 to 255 characters.',
+            );
+        }
+    }
+
+    private function integerValue(
+        mixed $value,
+        string $name,
+    ): int {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (
+            is_string($value)
+            && ctype_digit($value)
+        ) {
+            return (int) $value;
+        }
+
+        throw new UnexpectedValueException(
+            "{$name} is missing or invalid.",
+        );
     }
 
     private function assertAbsoluteHttpUrl(

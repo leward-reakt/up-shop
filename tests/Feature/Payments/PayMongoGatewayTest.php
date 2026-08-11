@@ -17,6 +17,9 @@ class PayMongoGatewayTest extends TestCase
     private const CHECKOUT_URL =
         'https://api.paymongo.com/v2/checkout_sessions';
 
+    private const REFUNDS_URL =
+        'https://api.paymongo.com/refunds';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -55,6 +58,7 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-001',
             successUrl: 'https://shop.example.com/checkout/payment/success',
             cancelUrl: 'https://shop.example.com/checkout/payment/cancelled',
+            idempotencyKey: 'checkout-test-gcash',
         );
 
         $this->assertSame(
@@ -74,6 +78,10 @@ class PayMongoGatewayTest extends TestCase
                         'Basic '.base64_encode(
                             'sk_test_example:',
                         ),
+                    )
+                    && $request->hasHeader(
+                        'Idempotency-Key',
+                        'checkout-test-gcash',
                     )
                     && $request['data']['attributes']['line_items'] === [
                         [
@@ -118,6 +126,7 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-MAYA',
             successUrl: 'https://shop.example.com/success',
             cancelUrl: 'https://shop.example.com/cancel',
+            idempotencyKey: 'checkout-test-maya',
         );
 
         Http::assertSent(
@@ -143,6 +152,7 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-COD',
             successUrl: 'https://shop.example.com/success',
             cancelUrl: 'https://shop.example.com/cancel',
+            idempotencyKey: 'checkout-test-cod',
         );
     }
 
@@ -161,6 +171,7 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-USD',
             successUrl: 'https://shop.example.com/success',
             cancelUrl: 'https://shop.example.com/cancel',
+            idempotencyKey: 'checkout-test-usd',
         );
     }
 
@@ -179,6 +190,7 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-ZERO',
             successUrl: 'https://shop.example.com/success',
             cancelUrl: 'https://shop.example.com/cancel',
+            idempotencyKey: 'checkout-test-zero',
         );
     }
 
@@ -199,6 +211,7 @@ class PayMongoGatewayTest extends TestCase
                 referenceNumber: 'UP-TEST-NOKEY',
                 successUrl: 'https://shop.example.com/success',
                 cancelUrl: 'https://shop.example.com/cancel',
+                idempotencyKey: 'checkout-test-no-key',
             );
 
             $this->fail(
@@ -238,6 +251,7 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-ERROR',
             successUrl: 'https://shop.example.com/success',
             cancelUrl: 'https://shop.example.com/cancel',
+            idempotencyKey: 'checkout-test-error',
         );
     }
 
@@ -268,6 +282,180 @@ class PayMongoGatewayTest extends TestCase
             referenceNumber: 'UP-TEST-MALFORMED',
             successUrl: 'https://shop.example.com/success',
             cancelUrl: 'https://shop.example.com/cancel',
+            idempotencyKey: 'checkout-test-malformed',
         );
+    }
+
+    public function test_it_creates_a_full_refund(): void
+    {
+        Http::fake([
+            self::REFUNDS_URL => Http::response(
+                $this->refundResponse(
+                    id: 'ref_test_123',
+                    paymentId: 'pay_test_123',
+                    amount: 125_050,
+                    status: 'processing',
+                ),
+                200,
+            ),
+        ]);
+
+        $result = app(
+            PayMongoGateway::class,
+        )->refundPayment(
+            paymentId: 'pay_test_123',
+            amount: 125_050,
+            idempotencyKey: 'refund-test-123',
+            notes: 'Full refund for UP-TEST-001.',
+        );
+
+        $this->assertSame(
+            [
+                'id' => 'ref_test_123',
+                'payment_id' => 'pay_test_123',
+                'amount' => 125_050,
+                'currency' => 'PHP',
+                'status' => 'processing',
+            ],
+            $result,
+        );
+
+        Http::assertSent(
+            function (Request $request): bool {
+                return $request->method() === 'POST'
+                    && $request->url() === self::REFUNDS_URL
+                    && $request->hasHeader(
+                        'Idempotency-Key',
+                        'refund-test-123',
+                    )
+                    && $request['data']['attributes']['payment_id']
+                        === 'pay_test_123'
+                    && $request['data']['attributes']['amount']
+                        === 125_050
+                    && $request['data']['attributes']['reason']
+                        === 'others'
+                    && $request['data']['attributes']['notes']
+                        === 'Full refund for UP-TEST-001.';
+            },
+        );
+    }
+
+    public function test_it_retrieves_a_refund(): void
+    {
+        Http::fake([
+            self::REFUNDS_URL.'/ref_test_123' => Http::response(
+                $this->refundResponse(
+                    id: 'ref_test_123',
+                    paymentId: 'pay_test_123',
+                    amount: 125_050,
+                    status: 'succeeded',
+                ),
+                200,
+            ),
+        ]);
+
+        $result = app(
+            PayMongoGateway::class,
+        )->retrieveRefund(
+            'ref_test_123',
+        );
+
+        $this->assertSame(
+            [
+                'id' => 'ref_test_123',
+                'payment_id' => 'pay_test_123',
+                'amount' => 125_050,
+                'currency' => 'PHP',
+                'status' => 'succeeded',
+            ],
+            $result,
+        );
+    }
+
+    public function test_refund_provider_errors_are_not_silently_accepted(): void
+    {
+        Http::fake([
+            self::REFUNDS_URL => Http::response(
+                [
+                    'errors' => [
+                        [
+                            'code' => 'payment_not_refundable',
+                            'detail' => 'Payment cannot be refunded.',
+                        ],
+                    ],
+                ],
+                422,
+            ),
+        ]);
+
+        $this->expectException(
+            RequestException::class,
+        );
+
+        app(
+            PayMongoGateway::class,
+        )->refundPayment(
+            paymentId: 'pay_test_123',
+            amount: 125_050,
+            idempotencyKey: 'refund-test-error',
+        );
+    }
+
+    public function test_malformed_refund_response_is_rejected(): void
+    {
+        Http::fake([
+            self::REFUNDS_URL => Http::response(
+                [
+                    'data' => [
+                        'id' => 'ref_bad',
+                        'type' => 'refund',
+                        'attributes' => [
+                            'payment_id' => 'pay_test_123',
+                            'amount' => 125_050,
+                            'currency' => 'PHP',
+                            'status' => 'unknown',
+                        ],
+                    ],
+                ],
+                200,
+            ),
+        ]);
+
+        $this->expectException(
+            UnexpectedValueException::class,
+        );
+
+        app(
+            PayMongoGateway::class,
+        )->refundPayment(
+            paymentId: 'pay_test_123',
+            amount: 125_050,
+            idempotencyKey: 'refund-test-malformed',
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function refundResponse(
+        string $id,
+        string $paymentId,
+        int $amount,
+        string $status,
+    ): array {
+        return [
+            'data' => [
+                'id' => $id,
+                'type' => 'refund',
+                'attributes' => [
+                    'payment_id' => $paymentId,
+                    'amount' => $amount,
+                    'currency' => 'PHP',
+                    'status' => $status,
+                    'reason' => 'others',
+                    'notes' => 'Full refund.',
+                ],
+            ],
+        ];
     }
 }

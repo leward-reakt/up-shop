@@ -60,8 +60,7 @@ function statusCopy(
         case 'refunded':
             return {
                 title: 'Payment refunded',
-                description:
-                    'The payment for this order has been refunded.',
+                description: 'The payment for this order has been refunded.',
             };
 
         default:
@@ -99,11 +98,9 @@ export default function PaymentReturn({
 
     const sharedProps = page.props as unknown as SharedProps;
 
-    const isFashionEditorial =
-        sharedProps.store?.theme === 'fashion_editorial';
+    const isFashionEditorial = sharedProps.store?.theme === 'fashion_editorial';
 
-    const navigationCategories =
-        sharedProps.store?.navigation_categories ?? [];
+    const navigationCategories = sharedProps.store?.navigation_categories ?? [];
 
     const paymentError = sharedProps.errors?.payment;
 

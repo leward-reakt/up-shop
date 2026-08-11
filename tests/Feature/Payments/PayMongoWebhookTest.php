@@ -353,14 +353,13 @@ class PayMongoWebhookTest extends TestCase
     private function placePendingPayMongoOrder(): array
     {
         Http::fake([
-            'https://api.paymongo.com/v2/checkout_sessions' =>
-                Http::response(
-                    $this->checkoutSessionResponse(
-                        'cs_webhook_test',
-                        'https://checkout.paymongo.com/cs_webhook_test',
-                    ),
-                    200,
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                $this->checkoutSessionResponse(
+                    'cs_webhook_test',
+                    'https://checkout.paymongo.com/cs_webhook_test',
                 ),
+                200,
+            ),
         ]);
 
         $product = Product::factory()->create([
@@ -488,6 +487,7 @@ class PayMongoWebhookTest extends TestCase
 
     /**
      * @param  array<string, mixed>  $payload
+     *
      * @throws JsonException
      */
     private function encodePayload(array $payload): string

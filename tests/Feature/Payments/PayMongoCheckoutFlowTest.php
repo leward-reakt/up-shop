@@ -55,14 +55,13 @@ class PayMongoCheckoutFlowTest extends TestCase
     public function test_gcash_checkout_creates_order_and_redirects_to_paymongo(): void
     {
         Http::fake([
-            'https://api.paymongo.com/v2/checkout_sessions' =>
-                Http::response(
-                    $this->checkoutSessionResponse(
-                        'cs_gcash_test',
-                        'https://checkout.paymongo.com/cs_gcash_test',
-                    ),
-                    200,
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                $this->checkoutSessionResponse(
+                    'cs_gcash_test',
+                    'https://checkout.paymongo.com/cs_gcash_test',
                 ),
+                200,
+            ),
         ]);
 
         $product = $this->product();
@@ -179,14 +178,13 @@ class PayMongoCheckoutFlowTest extends TestCase
     public function test_maya_uses_paymaya_provider_identifier(): void
     {
         Http::fake([
-            'https://api.paymongo.com/v2/checkout_sessions' =>
-                Http::response(
-                    $this->checkoutSessionResponse(
-                        'cs_maya_test',
-                        'https://checkout.paymongo.com/cs_maya_test',
-                    ),
-                    200,
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                $this->checkoutSessionResponse(
+                    'cs_maya_test',
+                    'https://checkout.paymongo.com/cs_maya_test',
                 ),
+                200,
+            ),
         ]);
 
         $product = $this->product();
@@ -210,29 +208,27 @@ class PayMongoCheckoutFlowTest extends TestCase
             ->assertStatus(409);
 
         Http::assertSent(
-            fn (ClientRequest $request): bool =>
-                data_get(
-                    $request->data(),
-                    'data.attributes.payment_method_types.0',
-                ) === 'paymaya',
+            fn (ClientRequest $request): bool => data_get(
+                $request->data(),
+                'data.attributes.payment_method_types.0',
+            ) === 'paymaya',
         );
     }
 
     public function test_provider_failure_keeps_created_order_pending_and_recoverable(): void
     {
         Http::fake([
-            'https://api.paymongo.com/v2/checkout_sessions' =>
-                Http::response(
-                    [
-                        'errors' => [
-                            [
-                                'code' => 'provider_error',
-                                'detail' => 'Temporary test failure.',
-                            ],
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                [
+                    'errors' => [
+                        [
+                            'code' => 'provider_error',
+                            'detail' => 'Temporary test failure.',
                         ],
                     ],
-                    500,
-                ),
+                ],
+                500,
+            ),
         ]);
 
         $product = $this->product();
@@ -391,16 +387,15 @@ class PayMongoCheckoutFlowTest extends TestCase
             $this->placePendingPayMongoOrder();
 
         Http::fake([
-            'https://api.paymongo.com/v1/checkout_sessions/cs_initial_test' =>
-                Http::response(
-                    $this->retrievedCheckoutSessionResponse(
-                        checkoutId: 'cs_initial_test',
-                        checkoutUrl: 'https://checkout.paymongo.com/cs_initial_test',
-                        status: 'active',
-                        referenceNumber: $order->order_number,
-                    ),
-                    200,
+            'https://api.paymongo.com/v1/checkout_sessions/cs_initial_test' => Http::response(
+                $this->retrievedCheckoutSessionResponse(
+                    checkoutId: 'cs_initial_test',
+                    checkoutUrl: 'https://checkout.paymongo.com/cs_initial_test',
+                    status: 'active',
+                    referenceNumber: $order->order_number,
                 ),
+                200,
+            ),
         ]);
 
         $this
@@ -451,25 +446,23 @@ class PayMongoCheckoutFlowTest extends TestCase
             $this->placePendingPayMongoOrder();
 
         Http::fake([
-            'https://api.paymongo.com/v1/checkout_sessions/cs_initial_test' =>
-                Http::response(
-                    $this->retrievedCheckoutSessionResponse(
-                        checkoutId: 'cs_initial_test',
-                        checkoutUrl: 'https://checkout.paymongo.com/cs_initial_test',
-                        status: 'expired',
-                        referenceNumber: $order->order_number,
-                    ),
-                    200,
+            'https://api.paymongo.com/v1/checkout_sessions/cs_initial_test' => Http::response(
+                $this->retrievedCheckoutSessionResponse(
+                    checkoutId: 'cs_initial_test',
+                    checkoutUrl: 'https://checkout.paymongo.com/cs_initial_test',
+                    status: 'expired',
+                    referenceNumber: $order->order_number,
                 ),
+                200,
+            ),
 
-            'https://api.paymongo.com/v2/checkout_sessions' =>
-                Http::response(
-                    $this->checkoutSessionResponse(
-                        'cs_replacement_test',
-                        'https://checkout.paymongo.com/cs_replacement_test',
-                    ),
-                    200,
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                $this->checkoutSessionResponse(
+                    'cs_replacement_test',
+                    'https://checkout.paymongo.com/cs_replacement_test',
                 ),
+                200,
+            ),
         ]);
 
         $this
@@ -525,14 +518,13 @@ class PayMongoCheckoutFlowTest extends TestCase
     private function placePendingPayMongoOrder(): array
     {
         Http::fake([
-            'https://api.paymongo.com/v2/checkout_sessions' =>
-                Http::response(
-                    $this->checkoutSessionResponse(
-                        'cs_initial_test',
-                        'https://checkout.paymongo.com/cs_initial_test',
-                    ),
-                    200,
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                $this->checkoutSessionResponse(
+                    'cs_initial_test',
+                    'https://checkout.paymongo.com/cs_initial_test',
                 ),
+                200,
+            ),
         ]);
 
         $product = $this->product();
