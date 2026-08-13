@@ -10,6 +10,8 @@ use App\Models\Product;
 use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 class DevelopmentSeeder extends Seeder
 {
@@ -516,7 +518,33 @@ class DevelopmentSeeder extends Seeder
             if ($product->trashed()) {
                 $product->restore();
             }
+
+            $this->seedProductImage($product);
         }
+    }
+
+    private function seedProductImage(Product $product): void
+    {
+        $sourcePath = database_path(
+            "seeders/images/products/{$product->sku}.png",
+        );
+
+        $storagePath = "products/{$product->sku}.png";
+
+        Storage::disk('public')->put(
+            $storagePath,
+            File::get($sourcePath),
+        );
+
+        $product->images()->updateOrCreate(
+            [
+                'path' => $storagePath,
+            ],
+            [
+                'alt_text' => $product->name,
+                'sort_order' => 0,
+            ],
+        );
     }
 
     private function seedDiscounts(): void
