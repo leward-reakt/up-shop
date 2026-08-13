@@ -1,52 +1,69 @@
 import { Link } from '@inertiajs/react';
+import { toStorefrontHref } from '@/components/landing-pages/fashion-editorial/types';
+import type { LandingPageSection } from '@/components/landing-pages/fashion-editorial/types';
 import type { CatalogProduct } from '@/types';
 
 type HeroSectionProps = {
-    product?: CatalogProduct;
+    section: LandingPageSection;
+    fallbackProduct?: CatalogProduct;
 };
 
-export function HeroSection({ product }: HeroSectionProps) {
+export function HeroSection({ section, fallbackProduct }: HeroSectionProps) {
+    const imageUrl = section.image_url ?? fallbackProduct?.image_url;
+
+    const imageAlt =
+        section.image_alt ??
+        fallbackProduct?.image_alt ??
+        fallbackProduct?.name ??
+        section.title ??
+        'Storefront hero';
+
+    const buttonHref = toStorefrontHref(section.button_url);
+
     return (
-        <section className="bg-[#8b8177]">
-            <div className="relative w-full">
-                <div className="relative overflow-hidden">
-                    {product?.image_url ? (
-                        <img
-                            src={product.image_url}
-                            alt={product.image_alt ?? product.name}
-                            loading="eager"
-                            className="block h-auto w-full"
-                        />
-                    ) : (
-                        <div className="aspect-[4/3] bg-gradient-to-br from-[#a99e92] via-[#796f66] to-[#514b45] sm:aspect-[16/9]" />
+        <section className="relative isolate h-[calc(100svh-6rem)] max-h-[100svh] min-h-0 overflow-hidden bg-[#8b8177]">
+            {imageUrl ? (
+                <img
+                    src={imageUrl}
+                    alt={imageAlt}
+                    loading="eager"
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                />
+            ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-[#a99e92] via-[#796f66] to-[#514b45]" />
+            )}
+
+            <div className="pointer-events-none absolute inset-0 bg-black/20" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
+
+            <div className="relative z-10 mx-auto flex h-full max-w-[1600px] items-end justify-center px-5 pb-8 text-center sm:px-8 sm:pb-14 lg:px-14 lg:pb-20">
+                <div className="max-w-3xl text-white">
+                    {section.eyebrow && (
+                        <p className="text-[10px] font-medium tracking-[0.24em] uppercase">
+                            {section.eyebrow}
+                        </p>
                     )}
 
-                    <div className="pointer-events-none absolute inset-0 bg-black/20" />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
-                </div>
-
-                <div className="relative z-10 px-5 py-12 text-center text-white sm:absolute sm:inset-0 sm:flex sm:items-end sm:justify-center sm:px-8 sm:pt-24 sm:pb-14 lg:px-14 lg:pb-24">
-                    <div className="mx-auto max-w-3xl">
-                        <p className="text-[10px] font-medium tracking-[0.24em] uppercase">
-                            The New Collection
-                        </p>
-
-                        <h1 className="mt-5 font-serif text-[clamp(3rem,13vw,4.75rem)] leading-[0.95] font-normal tracking-[-0.035em] sm:mt-6 sm:text-[clamp(4rem,7vw,6.5rem)]">
-                            Effortless elegance.
+                    {section.title && (
+                        <h1 className="mt-4 font-serif text-[clamp(2.75rem,12vw,4.75rem)] leading-[0.95] font-normal tracking-[-0.035em] whitespace-pre-line sm:mt-6 sm:text-[clamp(4rem,7vw,6.5rem)]">
+                            {section.title}
                         </h1>
+                    )}
 
-                        <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-white/90 sm:mt-7 sm:text-base">
-                            Refined silhouettes, considered details, and
-                            timeless pieces created for modern dressing.
+                    {section.body && (
+                        <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/90 sm:mt-7 sm:text-base sm:leading-7">
+                            {section.body}
                         </p>
+                    )}
 
+                    {section.button_label && buttonHref && (
                         <Link
-                            href="/shop?sort=newest"
-                            className="mt-8 inline-flex min-h-12 items-center justify-center border border-white bg-white px-7 text-[10px] font-medium tracking-[0.16em] text-neutral-950 uppercase transition duration-300 hover:bg-transparent hover:text-white sm:mt-9"
+                            href={buttonHref}
+                            className="mt-6 inline-flex min-h-11 items-center justify-center border border-white bg-white px-7 text-[10px] font-medium tracking-[0.16em] text-neutral-950 uppercase transition duration-300 hover:bg-transparent hover:text-white sm:mt-9 sm:min-h-12"
                         >
-                            Shop new arrivals
+                            {section.button_label}
                         </Link>
-                    </div>
+                    )}
                 </div>
             </div>
         </section>

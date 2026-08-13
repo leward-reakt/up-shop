@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\LandingPageSection;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
@@ -31,9 +32,7 @@ class HomeController extends Controller
 
             'categories' => $this->landingCategories(),
 
-            'heroImageUrl' => $this->publicAssetUrl(
-                'website/hero-banner.png',
-            ),
+            'sections' => $this->landingSections(),
         ]);
     }
 
@@ -114,9 +113,6 @@ class HomeController extends Controller
     }
 
     /**
-     * Dedicated seeded category covers are resolved by category slug.
-     * Existing product-image fallback remains available when no cover exists.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function landingCategories(): array
@@ -132,39 +128,102 @@ class HomeController extends Controller
             ->limit(5)
             ->get()
             ->map(function (Category $category): array {
-                $categoryImageUrl = $this->publicAssetUrl(
-                    "categories/{$category->slug}.png",
-                );
+                // Prefer the administrator-managed category image.
+                $uploadedImageUrl = $category->image_path === null
+                    ? null
+                    : Storage::disk('public')->url($category->image_path);
 
-                $product = $category
-                    ->products()
-                    ->where('is_active', true)
-                    ->with([
-                        'images:id,product_id,path,alt_text,sort_order',
-                    ])
-                    ->latest()
-                    ->first();
+                // Preserve seeded development category covers as a fallback.
+                $seededImageUrl = $uploadedImageUrl === null
+                    ? $this->publicAssetUrl(
+                        "categories/{$category->slug}.png",
+                    )
+                    : null;
 
-                $mainImage = $product?->images->first();
+                $mainImage = null;
+
+                if (
+                    $uploadedImageUrl === null
+                    && $seededImageUrl === null
+                ) {
+                    $product = $category
+                        ->products()
+                        ->where('is_active', true)
+                        ->with([
+                            'images:id,product_id,path,alt_text,sort_order',
+                        ])
+                        ->latest()
+                        ->first();
+
+                    $mainImage = $product?->images->first();
+                }
+
+                $imageUrl = $uploadedImageUrl
+                    ?? $seededImageUrl
+                    ?? (
+                        $mainImage === null
+                            ? null
+                            : $this->publicAssetUrl($mainImage->path)
+                    );
+
+                $imageAlt = $category->image_alt;
+
+                if (
+                    $imageAlt === null
+                    && (
+                        $uploadedImageUrl !== null
+                        || $seededImageUrl !== null
+                    )
+                ) {
+                    $imageAlt = $category->name;
+                }
+
+                $imageAlt ??= $mainImage?->alt_text;
 
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
-
-                    'image_url' => $categoryImageUrl
-                        ?? (
-                            $mainImage === null
-                                ? null
-                                : $this->publicAssetUrl($mainImage->path)
-                        ),
-
-                    'image_alt' => $categoryImageUrl !== null
-                        ? $category->name
-                        : $mainImage?->alt_text,
+                    'image_url' => $imageUrl,
+                    'image_alt' => $imageAlt,
                 ];
             })
             ->values()
+            ->all();
+    }
+
+    /**
+     * Only active homepage sections are exposed to the storefront.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function landingSections(): array
+    {
+        return LandingPageSection::query()
+            ->where('is_active', true)
+            ->get()
+            ->mapWithKeys(
+                function (LandingPageSection $section): array {
+                    return [
+                        $section->key => [
+                            'key' => $section->key,
+                            'eyebrow' => $section->eyebrow,
+                            'title' => $section->title,
+                            'body' => $section->body,
+                            'button_label' => $section->button_label,
+                            'button_url' => $section->button_url,
+
+                            'image_url' => $section->image_path === null
+                                ? null
+                                : Storage::disk('public')->url(
+                                    $section->image_path,
+                                ),
+
+                            'image_alt' => $section->image_alt,
+                        ],
+                    ];
+                },
+            )
             ->all();
     }
 
