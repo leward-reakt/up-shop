@@ -54,8 +54,8 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                                 href={`/shop?category=${category.slug}`}
                                 className="group block"
                             >
-                                <div className="aspect-[3/4] overflow-hidden bg-[#e5ded5]">
-                                    {category.image_url ? (
+                                {category.image_url ? (
+                                    <div className="overflow-hidden bg-[#e5ded5]">
                                         <img
                                             src={category.image_url}
                                             alt={
@@ -63,14 +63,16 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                                                 category.name
                                             }
                                             loading="lazy"
-                                            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
+                                            className="block h-auto w-full"
                                         />
-                                    ) : (
+                                    </div>
+                                ) : (
+                                    <div className="aspect-square overflow-hidden bg-[#e5ded5]">
                                         <CategoryPlaceholder
                                             name={category.name}
                                         />
-                                    )}
-                                </div>
+                                    </div>
+                                )}
 
                                 <div className="mt-5 text-center">
                                     <h3 className="font-serif text-2xl">

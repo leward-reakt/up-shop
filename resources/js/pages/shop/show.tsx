@@ -88,7 +88,7 @@ function DefaultProductShow({ product }: { product: CatalogProductDetails }) {
                                 <img
                                     src={selectedImageUrl}
                                     alt={selectedImageAlt}
-                                    className="h-full w-full object-cover"
+                                    className="h-full w-full object-contain"
                                 />
                             ) : (
                                 <div className="flex h-full items-center justify-center text-neutral-400">
@@ -111,7 +111,7 @@ function DefaultProductShow({ product }: { product: CatalogProductDetails }) {
                                         <img
                                             src={image.url}
                                             alt={image.alt_text ?? product.name}
-                                            className="h-full w-full object-cover"
+                                            className="h-full w-full object-contain"
                                         />
                                     </button>
                                 ))}

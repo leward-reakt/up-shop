@@ -37,7 +37,7 @@ function FashionProductCard({ product }: { product: CatalogProduct }) {
                             src={product.image_url}
                             alt={product.image_alt ?? product.name}
                             loading="lazy"
-                            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
+                            className="h-full w-full object-contain transition duration-700 ease-out"
                         />
                     ) : (
                         <div className="flex h-full items-center justify-center bg-gradient-to-b from-[#eee9e2] to-[#ddd5cc] px-6 text-center">

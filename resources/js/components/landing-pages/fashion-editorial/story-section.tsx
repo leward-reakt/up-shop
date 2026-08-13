@@ -9,16 +9,16 @@ export function StorySection({ product }: StorySectionProps) {
     return (
         <section className="bg-[#f1ece5]">
             <div className="mx-auto grid max-w-[1600px] lg:grid-cols-2">
-                <div className="relative min-h-[480px] overflow-hidden bg-[#d6cec5] sm:min-h-[580px] lg:min-h-[680px]">
+                <div className="self-start overflow-hidden bg-[#d6cec5]">
                     {product?.image_url ? (
                         <img
                             src={product.image_url}
                             alt={product.image_alt ?? product.name}
                             loading="lazy"
-                            className="absolute inset-0 h-full w-full object-cover"
+                            className="block h-auto w-full"
                         />
                     ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#ded5cb] via-[#c7baad] to-[#a89a8e]" />
+                        <div className="aspect-square bg-gradient-to-br from-[#ded5cb] via-[#c7baad] to-[#a89a8e]" />
                     )}
                 </div>
 

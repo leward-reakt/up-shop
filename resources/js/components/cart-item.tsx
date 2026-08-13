@@ -100,8 +100,8 @@ export function CartItem({
                                         alt={item.image_alt ?? item.name}
                                         className={
                                             isFashionEditorial
-                                                ? 'h-full w-full object-cover transition duration-700 ease-out'
-                                                : 'h-full w-full object-cover'
+                                                ? 'h-full w-full object-contain transition duration-700 ease-out'
+                                                : 'h-full w-full object-contain'
                                         }
                                     />
                                 ) : (

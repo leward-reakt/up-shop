@@ -18,7 +18,7 @@ export function ProductCard({ product }: ProductCardProps) {
                             src={product.image_url}
                             alt={product.image_alt ?? product.name}
                             loading="lazy"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                         />
                     ) : (
                         <div className="flex h-full items-center justify-center text-sm text-neutral-400">

@@ -975,7 +975,7 @@ export default function Checkout({
                                                         <img
                                                             src={item.image_url}
                                                             alt={item.name}
-                                                            className="h-full w-full object-cover"
+                                                            className="h-full w-full object-contain"
                                                         />
                                                     ) : null}
                                                 </div>
@@ -1117,7 +1117,7 @@ export default function Checkout({
                                                         <img
                                                             src={item.image_url}
                                                             alt={item.name}
-                                                            className="h-full w-full object-cover"
+                                                            className="h-full w-full object-contain"
                                                         />
                                                     ) : null}
                                                 </div>

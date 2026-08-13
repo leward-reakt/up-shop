@@ -10,16 +10,16 @@ export function ProductImage({
     loading?: 'eager' | 'lazy';
 }) {
     return (
-        <div className="aspect-[3/4] overflow-hidden bg-[#ebe6df]">
+        <div className="overflow-hidden bg-[#ebe6df]">
             {product.image_url ? (
                 <img
                     src={product.image_url}
                     alt={product.image_alt ?? product.name}
                     loading={loading}
-                    className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
+                    className="block h-auto w-full"
                 />
             ) : (
-                <div className="flex h-full items-center justify-center bg-gradient-to-b from-[#eee9e2] to-[#ddd5cc] px-6 text-center">
+                <div className="flex aspect-square items-center justify-center bg-gradient-to-b from-[#eee9e2] to-[#ddd5cc] px-6 text-center">
                     <span className="text-[10px] tracking-[0.16em] text-neutral-500 uppercase">
                         {product.name}
                     </span>

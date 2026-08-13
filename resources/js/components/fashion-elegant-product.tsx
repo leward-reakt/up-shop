@@ -84,7 +84,7 @@ export default function FashionElegantProduct({
                                 <img
                                     src={selectedImageUrl}
                                     alt={selectedImageAlt}
-                                    className="h-full w-full object-cover"
+                                    className="h-full w-full object-contain"
                                 />
                             ) : (
                                 <div className="flex h-full items-center justify-center bg-gradient-to-b from-[#eee9e2] to-[#ddd5cc] px-8 text-center">
@@ -122,7 +122,7 @@ export default function FashionElegantProduct({
                                                     image.alt_text ??
                                                     product.name
                                                 }
-                                                className="h-full w-full object-cover"
+                                                className="h-full w-full object-contain"
                                             />
                                         </button>
                                     );
