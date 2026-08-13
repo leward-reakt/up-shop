@@ -20,6 +20,12 @@ class UpdatePaymentStatus
         ?string $reference = null,
         ?string $notes = null,
     ): Payment {
+        if ($payment->isPayMongoManaged()) {
+            throw ValidationException::withMessages([
+                'status' => 'PayMongo payment status is managed by the payment provider and cannot be updated manually.',
+            ]);
+        }
+
         $becamePaid = false;
 
         $updatedPayment = DB::transaction(
@@ -33,6 +39,12 @@ class UpdatePaymentStatus
                 $lockedPayment = Payment::query()
                     ->lockForUpdate()
                     ->findOrFail($payment->id);
+
+                if ($lockedPayment->isPayMongoManaged()) {
+                    throw ValidationException::withMessages([
+                        'status' => 'PayMongo payment status is managed by the payment provider and cannot be updated manually.',
+                    ]);
+                }
 
                 $statusChanged = $lockedPayment->status !== $status;
 
@@ -125,6 +137,10 @@ class UpdatePaymentStatus
     public static function allowedNextStatuses(
         Payment $payment,
     ): array {
+        if ($payment->isPayMongoManaged()) {
+            return [];
+        }
+
         return match ($payment->status) {
             PaymentStatus::Pending => [
                 PaymentStatus::Paid,
@@ -137,28 +153,13 @@ class UpdatePaymentStatus
                 PaymentStatus::Cancelled,
             ],
 
-            PaymentStatus::Paid => self::isPayMongoPayment($payment)
-                ? []
-                : [
-                    PaymentStatus::Refunded,
-                ],
+            PaymentStatus::Paid => [
+                PaymentStatus::Refunded,
+            ],
 
             PaymentStatus::Cancelled,
             PaymentStatus::Refunded => [],
         };
-    }
-
-    private static function isPayMongoPayment(
-        Payment $payment,
-    ): bool {
-        return in_array(
-            $payment->method,
-            [
-                PaymentMethod::GCash,
-                PaymentMethod::Maya,
-            ],
-            true,
-        );
     }
 
     private function notifyCustomer(

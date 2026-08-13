@@ -102,11 +102,11 @@ class PayMongoAdminVisibilityTest extends TestCase
             ->assertOk()
             ->assertSeeText('Payment amount')
             ->assertSeeText('PayMongo Checkout Reference')
-            ->assertSeeText('cs_admin_test')
+            ->assertSee('cs_admin_test')
             ->assertSeeText('PayMongo Payment Reference')
-            ->assertSeeText('pay_admin_test')
+            ->assertSee('pay_admin_test')
             ->assertSeeText('Refund Reference')
-            ->assertSeeText('refund_admin_test')
+            ->assertSee('refund_admin_test')
             ->assertDontSee(
                 'sk_test_admin_secret',
                 false,
