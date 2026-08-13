@@ -29,18 +29,23 @@ function resolveCurrency(currency: string | undefined): string {
 
 function FashionProductCard({ product }: { product: CatalogProduct }) {
     return (
-        <article className="group min-w-0">
+        <article data-shop-product-card className="group min-w-0">
             <Link href={`/products/${product.slug}`} className="block">
-                <div className="aspect-[3/4] overflow-hidden bg-[#ebe6df]">
+                <div
+                    data-shop-product-image-frame
+                    className="overflow-hidden bg-[#ebe6df]"
+                >
                     {product.image_url ? (
                         <img
+                            data-shop-product-image
                             src={product.image_url}
                             alt={product.image_alt ?? product.name}
                             loading="lazy"
-                            className="h-full w-full object-contain transition duration-700 ease-out"
+                            decoding="async"
+                            className="block h-auto w-full transition-opacity duration-300 group-hover:opacity-95"
                         />
                     ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-b from-[#eee9e2] to-[#ddd5cc] px-6 text-center">
+                        <div className="flex aspect-[4/5] items-center justify-center bg-gradient-to-b from-[#eee9e2] to-[#ddd5cc] px-6 text-center">
                             <span className="text-[10px] tracking-[0.16em] text-neutral-500 uppercase">
                                 {product.name}
                             </span>
@@ -48,21 +53,21 @@ function FashionProductCard({ product }: { product: CatalogProduct }) {
                     )}
                 </div>
 
-                <div className="mt-4 px-1">
+                <div className="mt-3 px-1 sm:mt-4">
                     {product.category && (
                         <p className="mb-1 text-[9px] tracking-[0.14em] text-neutral-500 uppercase">
                             {product.category.name}
                         </p>
                     )}
 
-                    <div className="flex items-start justify-between gap-5">
-                        <h2 className="min-w-0 truncate text-sm font-medium text-neutral-950">
+                    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                        <h2 className="min-w-0 text-sm leading-5 font-medium text-neutral-950">
                             {product.name}
                         </h2>
 
                         <Price
                             amount={product.price}
-                            className="shrink-0 text-xs text-neutral-700"
+                            className="text-xs text-neutral-700 sm:shrink-0"
                         />
                     </div>
 
@@ -114,12 +119,12 @@ export default function FashionElegantShop({
             <Head title="Shop" />
 
             <section className="border-b border-neutral-200 bg-[#f8f6f1]">
-                <div className="mx-auto max-w-[1600px] px-5 py-16 text-center sm:px-8 sm:py-20 lg:px-14 lg:py-24">
+                <div className="mx-auto max-w-[1600px] px-5 py-12 text-center sm:px-8 sm:py-20 lg:px-14 lg:py-24">
                     <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
                         The collection
                     </p>
 
-                    <h1 className="mt-4 font-serif text-[clamp(2.75rem,6vw,5rem)] leading-[0.98] font-normal tracking-[-0.035em]">
+                    <h1 className="mt-4 font-serif text-[clamp(2.5rem,12vw,5rem)] leading-[0.98] font-normal tracking-[-0.035em]">
                         Shop the collection.
                     </h1>
 
@@ -133,9 +138,9 @@ export default function FashionElegantShop({
             <section className="border-b border-neutral-200 bg-[#f8f6f1]">
                 <form
                     onSubmit={submitFilters}
-                    className="mx-auto max-w-[1600px] px-5 py-7 sm:px-8 lg:px-14"
+                    className="mx-auto max-w-[1600px] px-5 py-6 sm:px-8 sm:py-7 lg:px-14"
                 >
-                    <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-6">
+                    <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-6">
                         <div className="xl:col-span-1">
                             <label
                                 htmlFor="search"
@@ -282,7 +287,7 @@ export default function FashionElegantShop({
                 </form>
             </section>
 
-            <section className="bg-[#f8f6f1] px-5 py-14 sm:px-8 sm:py-16 lg:px-14 lg:py-20">
+            <section className="bg-[#f8f6f1] px-5 py-10 sm:px-8 sm:py-16 lg:px-14 lg:py-20">
                 <div className="mx-auto max-w-[1600px]">
                     <div className="mb-8 flex items-center justify-between gap-6">
                         <p className="text-[10px] tracking-[0.12em] text-neutral-500 uppercase">
@@ -293,7 +298,7 @@ export default function FashionElegantShop({
                     </div>
 
                     {products.data.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-12 sm:gap-x-5 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-6">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-6">
                             {products.data.map((product) => (
                                 <FashionProductCard
                                     key={product.id}
@@ -328,36 +333,36 @@ export default function FashionElegantShop({
                     {products.last_page > 1 && (
                         <nav
                             aria-label="Product pagination"
-                            className="mt-16 flex items-center justify-between border-t border-neutral-200 pt-7"
+                            className="mt-14 grid grid-cols-[1fr_auto_1fr] items-center border-t border-neutral-200 pt-7 sm:mt-16"
                         >
-                            {products.prev_page_url ? (
-                                <Link
-                                    href={products.prev_page_url}
-                                    preserveScroll
-                                    className="inline-flex min-h-10 items-center border-b border-neutral-950 text-[9px] font-medium tracking-[0.14em] uppercase transition-opacity hover:opacity-60"
-                                >
-                                    Previous
-                                </Link>
-                            ) : (
-                                <span />
-                            )}
+                            <div>
+                                {products.prev_page_url && (
+                                    <Link
+                                        href={products.prev_page_url}
+                                        preserveScroll
+                                        className="inline-flex min-h-10 items-center border-b border-neutral-950 text-[9px] font-medium tracking-[0.14em] uppercase transition-opacity hover:opacity-60"
+                                    >
+                                        Previous
+                                    </Link>
+                                )}
+                            </div>
 
-                            <span className="text-[9px] tracking-[0.14em] text-neutral-500 uppercase">
+                            <span className="px-3 text-center text-[9px] tracking-[0.14em] text-neutral-500 uppercase">
                                 Page {products.current_page} of{' '}
                                 {products.last_page}
                             </span>
 
-                            {products.next_page_url ? (
-                                <Link
-                                    href={products.next_page_url}
-                                    preserveScroll
-                                    className="inline-flex min-h-10 items-center border-b border-neutral-950 text-[9px] font-medium tracking-[0.14em] uppercase transition-opacity hover:opacity-60"
-                                >
-                                    Next
-                                </Link>
-                            ) : (
-                                <span />
-                            )}
+                            <div className="text-right">
+                                {products.next_page_url && (
+                                    <Link
+                                        href={products.next_page_url}
+                                        preserveScroll
+                                        className="inline-flex min-h-10 items-center border-b border-neutral-950 text-[9px] font-medium tracking-[0.14em] uppercase transition-opacity hover:opacity-60"
+                                    >
+                                        Next
+                                    </Link>
+                                )}
+                            </div>
                         </nav>
                     )}
                 </div>
