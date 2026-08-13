@@ -85,10 +85,7 @@ export function SignatureSection({
                             buttonUrl || `/products/${product.slug}`;
 
                         return (
-                            <article
-                                key={product.id}
-                                className="group min-w-0"
-                            >
+                            <article key={product.id} className="group min-w-0">
                                 <Link href={productUrl} className="block">
                                     <ProductImage product={product} />
 

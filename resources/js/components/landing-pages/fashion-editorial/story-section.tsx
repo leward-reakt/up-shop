@@ -9,20 +9,21 @@ export function StorySection({ product }: StorySectionProps) {
     return (
         <section className="bg-[#f1ece5]">
             <div className="mx-auto grid max-w-[1600px] lg:grid-cols-2">
-                <div className="relative min-h-[480px] overflow-hidden bg-[#d6cec5] sm:min-h-[580px] lg:min-h-[680px]">
+                <div className="overflow-hidden bg-[#d6cec5] lg:self-center">
                     {product?.image_url ? (
                         <img
                             src={product.image_url}
                             alt={product.image_alt ?? product.name}
                             loading="lazy"
-                            className="absolute inset-0 h-full w-full object-contain object-center"
+                            decoding="async"
+                            className="block h-auto w-full"
                         />
                     ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#ded5cb] via-[#c7baad] to-[#a89a8e]" />
+                        <div className="aspect-[4/3] bg-gradient-to-br from-[#ded5cb] via-[#c7baad] to-[#a89a8e] lg:aspect-square" />
                     )}
                 </div>
 
-                <div className="flex items-center px-6 py-20 sm:px-12 sm:py-24 lg:px-20">
+                <div className="flex items-center px-5 py-16 sm:px-12 sm:py-24 lg:px-20">
                     <div className="max-w-lg">
                         <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
                             Our approach

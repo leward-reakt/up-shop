@@ -7,7 +7,7 @@ type CollectionsSectionProps = {
 
 function CategoryPlaceholder({ name }: { name: string }) {
     return (
-        <div className="flex h-full items-center justify-center bg-gradient-to-b from-[#ede7df] to-[#d9d0c6] px-6 text-center">
+        <div className="flex aspect-[3/4] items-center justify-center bg-gradient-to-b from-[#ede7df] to-[#d9d0c6] px-6 text-center">
             <span className="font-serif text-3xl text-neutral-700">{name}</span>
         </div>
     );
@@ -28,7 +28,7 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
               : 'md:grid-cols-3';
 
     return (
-        <section className="bg-[#f8f6f1] px-5 py-20 sm:px-8 sm:py-24 lg:px-14 lg:py-32">
+        <section className="bg-[#f8f6f1] px-5 py-16 sm:px-8 sm:py-24 lg:px-14 lg:py-32">
             <div className="mx-auto max-w-[1600px]">
                 <header className="mx-auto max-w-2xl text-center">
                     <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
@@ -46,15 +46,15 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                 </header>
 
                 <div
-                    className={`mx-auto mt-12 grid gap-5 sm:gap-6 ${gridClass}`}
+                    className={`mx-auto mt-10 grid gap-8 sm:mt-12 sm:gap-6 ${gridClass}`}
                 >
                     {collectionCategories.map((category) => (
-                        <article key={category.id}>
+                        <article key={category.id} className="min-w-0">
                             <Link
                                 href={`/shop?category=${category.slug}`}
                                 className="group block"
                             >
-                                <div className="aspect-[3/4] overflow-hidden bg-[#e5ded5]">
+                                <div className="overflow-hidden bg-[#e5ded5]">
                                     {category.image_url ? (
                                         <img
                                             src={category.image_url}
@@ -63,7 +63,8 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                                                 category.name
                                             }
                                             loading="lazy"
-                                            className="h-full w-full object-contain object-center"
+                                            decoding="async"
+                                            className="block h-auto w-full transition-opacity duration-300 group-hover:opacity-95"
                                         />
                                     ) : (
                                         <CategoryPlaceholder
