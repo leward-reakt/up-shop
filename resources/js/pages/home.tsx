@@ -1,29 +1,26 @@
 import FashionEditorialLandingPage from '@/components/landing-pages/fashion-editorial';
-import type {
-    FashionEditorialCategory,
-    LandingPageSections,
-} from '@/components/landing-pages/fashion-editorial/types';
+import type { FashionEditorialCategory } from '@/components/landing-pages/fashion-editorial';
 import type { CatalogProduct } from '@/types';
 
 type HomeProps = {
     featuredProducts: CatalogProduct[];
     newArrivals: CatalogProduct[];
     categories: FashionEditorialCategory[];
-    sections: LandingPageSections;
+    heroImageUrl: string | null;
 };
 
 export default function Home({
     featuredProducts,
     newArrivals,
     categories,
-    sections,
+    heroImageUrl,
 }: HomeProps) {
     return (
         <FashionEditorialLandingPage
             categories={categories}
             featuredProducts={featuredProducts}
             newArrivals={newArrivals}
-            sections={sections}
+            heroImageUrl={heroImageUrl}
         />
     );
 }

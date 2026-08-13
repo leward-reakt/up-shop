@@ -1,12 +1,7 @@
 import { Link } from '@inertiajs/react';
-import { toStorefrontHref } from '@/components/landing-pages/fashion-editorial/types';
-import type {
-    FashionEditorialCategory,
-    LandingPageSection,
-} from '@/components/landing-pages/fashion-editorial/types';
+import type { FashionEditorialCategory } from '@/components/landing-pages/fashion-editorial/types';
 
 type CollectionsSectionProps = {
-    section: LandingPageSection;
     categories: FashionEditorialCategory[];
 };
 
@@ -18,12 +13,8 @@ function CategoryPlaceholder({ name }: { name: string }) {
     );
 }
 
-export function CollectionsSection({
-    section,
-    categories,
-}: CollectionsSectionProps) {
+export function CollectionsSection({ categories }: CollectionsSectionProps) {
     const collectionCategories = categories.slice(0, 3);
-    const buttonHref = toStorefrontHref(section.button_url);
 
     if (collectionCategories.length === 0) {
         return null;
@@ -40,23 +31,18 @@ export function CollectionsSection({
         <section className="bg-[#f8f6f1] px-5 py-20 sm:px-8 sm:py-24 lg:px-14 lg:py-32">
             <div className="mx-auto max-w-[1600px]">
                 <header className="mx-auto max-w-2xl text-center">
-                    {section.eyebrow && (
-                        <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
-                            {section.eyebrow}
-                        </p>
-                    )}
+                    <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                        Collections
+                    </p>
 
-                    {section.title && (
-                        <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
-                            {section.title}
-                        </h2>
-                    )}
+                    <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
+                        Shop by collection
+                    </h2>
 
-                    {section.body && (
-                        <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
-                            {section.body}
-                        </p>
-                    )}
+                    <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
+                        Discover a considered selection of pieces designed for
+                        an elegant and versatile wardrobe.
+                    </p>
                 </header>
 
                 <div
@@ -77,7 +63,7 @@ export function CollectionsSection({
                                                 category.name
                                             }
                                             loading="lazy"
-                                            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
+                                            className="h-full w-full object-contain object-center"
                                         />
                                     ) : (
                                         <CategoryPlaceholder
@@ -100,18 +86,16 @@ export function CollectionsSection({
                     ))}
                 </div>
 
-                {categories.length > 3 &&
-                    section.button_label &&
-                    buttonHref && (
-                        <div className="mt-12 text-center">
-                            <Link
-                                href={buttonHref}
-                                className="inline-flex min-h-11 items-center border-b border-neutral-950 text-[10px] font-medium tracking-[0.15em] uppercase transition-opacity hover:opacity-60"
-                            >
-                                {section.button_label}
-                            </Link>
-                        </div>
-                    )}
+                {categories.length > 3 && (
+                    <div className="mt-12 text-center">
+                        <Link
+                            href="/shop"
+                            className="inline-flex min-h-11 items-center border-b border-neutral-950 text-[10px] font-medium tracking-[0.15em] uppercase transition-opacity hover:opacity-60"
+                        >
+                            View all collections
+                        </Link>
+                    </div>
+                )}
             </div>
         </section>
     );

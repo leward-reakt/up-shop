@@ -9,7 +9,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         if (app()->environment('local')) {
-            $this->call(DevelopmentSeeder::class);
+            $this->call([
+                DevelopmentSeeder::class,
+                DevelopmentImageSeeder::class,
+            ]);
         }
     }
 }

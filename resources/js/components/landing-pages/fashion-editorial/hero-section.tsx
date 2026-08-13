@@ -1,69 +1,60 @@
 import { Link } from '@inertiajs/react';
-import { toStorefrontHref } from '@/components/landing-pages/fashion-editorial/types';
-import type { LandingPageSection } from '@/components/landing-pages/fashion-editorial/types';
 import type { CatalogProduct } from '@/types';
 
 type HeroSectionProps = {
-    section: LandingPageSection;
-    fallbackProduct?: CatalogProduct;
+    imageUrl?: string | null;
+    product?: CatalogProduct;
 };
 
-export function HeroSection({ section, fallbackProduct }: HeroSectionProps) {
-    const imageUrl = section.image_url ?? fallbackProduct?.image_url;
+export function HeroSection({
+    imageUrl,
+    product,
+}: HeroSectionProps) {
+    const resolvedImageUrl = imageUrl ?? product?.image_url ?? null;
 
-    const imageAlt =
-        section.image_alt ??
-        fallbackProduct?.image_alt ??
-        fallbackProduct?.name ??
-        section.title ??
-        'Storefront hero';
-
-    const buttonHref = toStorefrontHref(section.button_url);
+    const resolvedImageAlt = imageUrl
+        ? 'Up Shop editorial collection'
+        : (product?.image_alt ?? product?.name ?? 'Up Shop collection');
 
     return (
-        <section className="relative isolate min-h-[640px] overflow-hidden bg-[#8b8177] sm:min-h-[720px] lg:min-h-[800px]">
-            {imageUrl ? (
-                <img
-                    src={imageUrl}
-                    alt={imageAlt}
-                    loading="eager"
-                    className="absolute inset-0 h-full w-full object-cover"
-                />
-            ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-[#a99e92] via-[#796f66] to-[#514b45]" />
-            )}
+        <section className="relative isolate overflow-hidden bg-[#6f675f]">
+            <div className="relative aspect-video w-full bg-[#8b8177]">
+                {resolvedImageUrl ? (
+                    <img
+                        src={resolvedImageUrl}
+                        alt={resolvedImageAlt}
+                        loading="eager"
+                        className="absolute inset-0 h-full w-full object-contain object-center"
+                    />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#a99e92] via-[#796f66] to-[#514b45]" />
+                )}
 
-            <div className="absolute inset-0 bg-black/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
+                <div className="absolute inset-0 hidden bg-black/20 lg:block" />
+                <div className="absolute inset-0 hidden bg-gradient-to-t from-black/50 via-transparent to-black/10 lg:block" />
+            </div>
 
-            <div className="relative mx-auto flex min-h-[640px] max-w-[1600px] items-end justify-center px-5 pb-16 text-center sm:min-h-[720px] sm:px-8 sm:pb-20 lg:min-h-[800px] lg:px-14 lg:pb-24">
+            <div className="relative mx-auto flex max-w-[1600px] items-center justify-center px-5 py-12 text-center sm:px-8 sm:py-16 lg:absolute lg:inset-0 lg:items-end lg:px-14 lg:pb-24">
                 <div className="max-w-3xl text-white">
-                    {section.eyebrow && (
-                        <p className="text-[10px] font-medium tracking-[0.24em] uppercase">
-                            {section.eyebrow}
-                        </p>
-                    )}
+                    <p className="text-[10px] font-medium tracking-[0.24em] uppercase">
+                        The New Collection
+                    </p>
 
-                    {section.title && (
-                        <h1 className="mt-6 font-serif text-[clamp(3.5rem,7vw,6.5rem)] leading-[0.95] font-normal tracking-[-0.035em] whitespace-pre-line">
-                            {section.title}
-                        </h1>
-                    )}
+                    <h1 className="mt-6 font-serif text-[clamp(3.5rem,7vw,6.5rem)] leading-[0.95] font-normal tracking-[-0.035em]">
+                        Effortless elegance.
+                    </h1>
 
-                    {section.body && (
-                        <p className="mx-auto mt-7 max-w-xl text-sm leading-7 text-white/90 sm:text-base">
-                            {section.body}
-                        </p>
-                    )}
+                    <p className="mx-auto mt-7 max-w-xl text-sm leading-7 text-white/90 sm:text-base">
+                        Refined silhouettes, considered details, and timeless
+                        pieces created for modern dressing.
+                    </p>
 
-                    {section.button_label && buttonHref && (
-                        <Link
-                            href={buttonHref}
-                            className="mt-9 inline-flex min-h-12 items-center justify-center border border-white bg-white px-7 text-[10px] font-medium tracking-[0.16em] text-neutral-950 uppercase transition duration-300 hover:bg-transparent hover:text-white"
-                        >
-                            {section.button_label}
-                        </Link>
-                    )}
+                    <Link
+                        href="/shop?sort=newest"
+                        className="mt-9 inline-flex min-h-12 items-center justify-center border border-white bg-white px-7 text-[10px] font-medium tracking-[0.16em] text-neutral-950 uppercase transition duration-300 hover:bg-transparent hover:text-white"
+                    >
+                        Shop new arrivals
+                    </Link>
                 </div>
             </div>
         </section>

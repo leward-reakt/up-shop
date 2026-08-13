@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\LandingPageSection;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
@@ -32,7 +31,9 @@ class HomeController extends Controller
 
             'categories' => $this->landingCategories(),
 
-            'sections' => $this->landingSections(),
+            'heroImageUrl' => $this->publicAssetUrl(
+                'website/hero-banner.png',
+            ),
         ]);
     }
 
@@ -106,15 +107,16 @@ class HomeController extends Controller
 
             'image_url' => $mainImage === null
                 ? null
-                : Storage::disk('public')->url(
-                    $mainImage->path,
-                ),
+                : $this->publicAssetUrl($mainImage->path),
 
             'image_alt' => $mainImage?->alt_text,
         ];
     }
 
     /**
+     * Dedicated seeded category covers are resolved by category slug.
+     * Existing product-image fallback remains available when no cover exists.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function landingCategories(): array
@@ -130,74 +132,50 @@ class HomeController extends Controller
             ->limit(5)
             ->get()
             ->map(function (Category $category): array {
-                $mainImage = null;
+                $categoryImageUrl = $this->publicAssetUrl(
+                    "categories/{$category->slug}.png",
+                );
 
-                /*
-                 * Preserve the existing product-image fallback until an
-                 * administrator uploads a dedicated category storefront image.
-                 */
-                if ($category->image_path === null) {
-                    $product = $category
-                        ->products()
-                        ->where('is_active', true)
-                        ->with([
-                            'images:id,product_id,path,alt_text,sort_order',
-                        ])
-                        ->latest()
-                        ->first();
+                $product = $category
+                    ->products()
+                    ->where('is_active', true)
+                    ->with([
+                        'images:id,product_id,path,alt_text,sort_order',
+                    ])
+                    ->latest()
+                    ->first();
 
-                    $mainImage = $product?->images->first();
-                }
-
-                $imagePath = $category->image_path ?? $mainImage?->path;
+                $mainImage = $product?->images->first();
 
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
 
-                    'image_url' => $imagePath === null
-                        ? null
-                        : Storage::disk('public')->url($imagePath),
+                    'image_url' => $categoryImageUrl
+                        ?? (
+                            $mainImage === null
+                                ? null
+                                : $this->publicAssetUrl($mainImage->path)
+                        ),
 
-                    'image_alt' => $category->image_alt
-                        ?? $mainImage?->alt_text,
+                    'image_alt' => $categoryImageUrl !== null
+                        ? $category->name
+                        : $mainImage?->alt_text,
                 ];
             })
             ->values()
             ->all();
     }
 
-    /**
-     * @return array<string, array<string, mixed>>
-     */
-    private function landingSections(): array
+    private function publicAssetUrl(string $path): ?string
     {
-        return LandingPageSection::query()
-            ->where('is_active', true)
-            ->get()
-            ->mapWithKeys(
-                function (LandingPageSection $section): array {
-                    return [
-                        $section->key => [
-                            'key' => $section->key,
-                            'eyebrow' => $section->eyebrow,
-                            'title' => $section->title,
-                            'body' => $section->body,
-                            'button_label' => $section->button_label,
-                            'button_url' => $section->button_url,
+        $disk = Storage::disk('public');
 
-                            'image_url' => $section->image_path === null
-                                ? null
-                                : Storage::disk('public')->url(
-                                    $section->image_path,
-                                ),
+        if (! $disk->exists($path)) {
+            return null;
+        }
 
-                            'image_alt' => $section->image_alt,
-                        ],
-                    ];
-                },
-            )
-            ->all();
+        return $disk->url($path);
     }
 }
