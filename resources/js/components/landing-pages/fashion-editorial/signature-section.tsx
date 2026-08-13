@@ -1,22 +1,59 @@
 import { Link } from '@inertiajs/react';
 import { ProductImage } from '@/components/landing-pages/fashion-editorial/product-card';
-import { toStorefrontHref } from '@/components/landing-pages/fashion-editorial/types';
-import type { LandingPageSection } from '@/components/landing-pages/fashion-editorial/types';
 import { Price } from '@/components/price';
 import type { CatalogProduct } from '@/types';
 
-type SignatureSectionProps = {
-    section: LandingPageSection;
-    products: CatalogProduct[];
+type SignatureSectionVariables = {
+    eyebrow?: string | null;
+    label?: string | null;
+    heading?: string | null;
+    title?: string | null;
+    description?: string | null;
+    button_label?: string | null;
+    button_text?: string | null;
+    button_url?: string | null;
 };
 
-export function SignatureSection({ section, products }: SignatureSectionProps) {
+type SignatureSectionProps = {
+    products: CatalogProduct[];
+    variables?: SignatureSectionVariables | null;
+};
+
+export function SignatureSection({
+    products,
+    variables,
+}: SignatureSectionProps) {
     const signatureProducts = products.slice(0, 2);
-    const buttonHref = toStorefrontHref(section.button_url);
 
     if (signatureProducts.length === 0) {
         return null;
     }
+
+    /*
+     * Section variables may be absent for existing or partially configured
+     * landing-page records. Always keep the storefront renderable by using
+     * the original editorial copy as the fallback.
+     */
+    const eyebrow =
+        variables?.eyebrow?.trim() ||
+        variables?.label?.trim() ||
+        'Signature selection';
+
+    const heading =
+        variables?.heading?.trim() ||
+        variables?.title?.trim() ||
+        'Timeless by design';
+
+    const description =
+        variables?.description?.trim() ||
+        'A refined selection of defining pieces chosen for their versatility, proportion, and enduring appeal.';
+
+    const buttonLabel =
+        variables?.button_label?.trim() ||
+        variables?.button_text?.trim() ||
+        'Discover';
+
+    const buttonUrl = variables?.button_url?.trim();
 
     const gridClass =
         signatureProducts.length === 1
@@ -27,79 +64,67 @@ export function SignatureSection({ section, products }: SignatureSectionProps) {
         <section className="bg-[#f8f6f1] px-5 py-20 sm:px-8 sm:py-24 lg:px-14 lg:py-32">
             <div className="mx-auto max-w-[1600px]">
                 <header className="mx-auto max-w-2xl text-center">
-                    {section.eyebrow && (
-                        <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
-                            {section.eyebrow}
-                        </p>
-                    )}
+                    <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                        {eyebrow}
+                    </p>
 
-                    {section.title && (
-                        <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
-                            {section.title}
-                        </h2>
-                    )}
+                    <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
+                        {heading}
+                    </h2>
 
-                    {section.body && (
-                        <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
-                            {section.body}
-                        </p>
-                    )}
+                    <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
+                        {description}
+                    </p>
                 </header>
 
                 <div
                     className={`mx-auto mt-12 grid gap-8 sm:gap-10 ${gridClass}`}
                 >
-                    {signatureProducts.map((product) => (
-                        <article key={product.id} className="group min-w-0">
-                            <Link
-                                href={`/products/${product.slug}`}
-                                className="block"
+                    {signatureProducts.map((product) => {
+                        const productUrl =
+                            buttonUrl || `/products/${product.slug}`;
+
+                        return (
+                            <article
+                                key={product.id}
+                                className="group min-w-0"
                             >
-                                <ProductImage product={product} />
+                                <Link href={productUrl} className="block">
+                                    <ProductImage product={product} />
 
-                                <div className="mt-5">
-                                    {product.category && (
-                                        <p className="mb-2 text-[10px] tracking-[0.14em] text-neutral-500 uppercase">
-                                            {product.category.name}
-                                        </p>
-                                    )}
+                                    <div className="mt-5">
+                                        {product.category && (
+                                            <p className="mb-2 text-[10px] tracking-[0.14em] text-neutral-500 uppercase">
+                                                {product.category.name}
+                                            </p>
+                                        )}
 
-                                    <div className="flex items-start justify-between gap-6">
-                                        <h3 className="font-serif text-2xl leading-tight">
-                                            {product.name}
-                                        </h3>
+                                        <div className="flex items-start justify-between gap-6">
+                                            <h3 className="font-serif text-2xl leading-tight">
+                                                {product.name}
+                                            </h3>
 
-                                        <Price
-                                            amount={product.price}
-                                            className="shrink-0 pt-1 text-sm text-neutral-700"
-                                        />
+                                            <Price
+                                                amount={product.price}
+                                                className="shrink-0 pt-1 text-sm text-neutral-700"
+                                            />
+                                        </div>
+
+                                        {product.stock_quantity > 0 ? (
+                                            <span className="mt-5 inline-flex border-b border-neutral-950 pb-1 text-[10px] font-medium tracking-[0.14em] uppercase transition-opacity group-hover:opacity-60">
+                                                {buttonLabel}
+                                            </span>
+                                        ) : (
+                                            <p className="mt-4 text-[10px] tracking-[0.14em] text-neutral-500 uppercase">
+                                                Out of stock
+                                            </p>
+                                        )}
                                     </div>
-
-                                    {product.stock_quantity > 0 ? (
-                                        <span className="mt-5 inline-flex border-b border-neutral-950 pb-1 text-[10px] font-medium tracking-[0.14em] uppercase transition-opacity group-hover:opacity-60">
-                                            Discover
-                                        </span>
-                                    ) : (
-                                        <p className="mt-4 text-[10px] tracking-[0.14em] text-neutral-500 uppercase">
-                                            Out of stock
-                                        </p>
-                                    )}
-                                </div>
-                            </Link>
-                        </article>
-                    ))}
+                                </Link>
+                            </article>
+                        );
+                    })}
                 </div>
-
-                {section.button_label && buttonHref && (
-                    <div className="mt-12 text-center">
-                        <Link
-                            href={buttonHref}
-                            className="inline-flex min-h-11 items-center border-b border-neutral-950 text-[10px] font-medium tracking-[0.15em] uppercase transition-opacity hover:opacity-60"
-                        >
-                            {section.button_label}
-                        </Link>
-                    </div>
-                )}
             </div>
         </section>
     );
