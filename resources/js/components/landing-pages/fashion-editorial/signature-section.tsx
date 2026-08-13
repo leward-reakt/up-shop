@@ -1,14 +1,18 @@
 import { Link } from '@inertiajs/react';
 import { ProductImage } from '@/components/landing-pages/fashion-editorial/product-card';
+import { toStorefrontHref } from '@/components/landing-pages/fashion-editorial/types';
+import type { LandingPageSection } from '@/components/landing-pages/fashion-editorial/types';
 import { Price } from '@/components/price';
 import type { CatalogProduct } from '@/types';
 
 type SignatureSectionProps = {
+    section: LandingPageSection;
     products: CatalogProduct[];
 };
 
-export function SignatureSection({ products }: SignatureSectionProps) {
+export function SignatureSection({ section, products }: SignatureSectionProps) {
     const signatureProducts = products.slice(0, 2);
+    const buttonHref = toStorefrontHref(section.button_url);
 
     if (signatureProducts.length === 0) {
         return null;
@@ -23,18 +27,23 @@ export function SignatureSection({ products }: SignatureSectionProps) {
         <section className="bg-[#f8f6f1] px-5 py-20 sm:px-8 sm:py-24 lg:px-14 lg:py-32">
             <div className="mx-auto max-w-[1600px]">
                 <header className="mx-auto max-w-2xl text-center">
-                    <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
-                        Signature selection
-                    </p>
+                    {section.eyebrow && (
+                        <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                            {section.eyebrow}
+                        </p>
+                    )}
 
-                    <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
-                        Timeless by design
-                    </h2>
+                    {section.title && (
+                        <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
+                            {section.title}
+                        </h2>
+                    )}
 
-                    <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
-                        A refined selection of defining pieces chosen for their
-                        versatility, proportion, and enduring appeal.
-                    </p>
+                    {section.body && (
+                        <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
+                            {section.body}
+                        </p>
+                    )}
                 </header>
 
                 <div
@@ -80,6 +89,17 @@ export function SignatureSection({ products }: SignatureSectionProps) {
                         </article>
                     ))}
                 </div>
+
+                {section.button_label && buttonHref && (
+                    <div className="mt-12 text-center">
+                        <Link
+                            href={buttonHref}
+                            className="inline-flex min-h-11 items-center border-b border-neutral-950 text-[10px] font-medium tracking-[0.15em] uppercase transition-opacity hover:opacity-60"
+                        >
+                            {section.button_label}
+                        </Link>
+                    </div>
+                )}
             </div>
         </section>
     );

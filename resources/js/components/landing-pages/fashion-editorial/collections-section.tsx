@@ -1,7 +1,12 @@
 import { Link } from '@inertiajs/react';
-import type { FashionEditorialCategory } from '@/components/landing-pages/fashion-editorial/types';
+import { toStorefrontHref } from '@/components/landing-pages/fashion-editorial/types';
+import type {
+    FashionEditorialCategory,
+    LandingPageSection,
+} from '@/components/landing-pages/fashion-editorial/types';
 
 type CollectionsSectionProps = {
+    section: LandingPageSection;
     categories: FashionEditorialCategory[];
 };
 
@@ -13,8 +18,12 @@ function CategoryPlaceholder({ name }: { name: string }) {
     );
 }
 
-export function CollectionsSection({ categories }: CollectionsSectionProps) {
+export function CollectionsSection({
+    section,
+    categories,
+}: CollectionsSectionProps) {
     const collectionCategories = categories.slice(0, 3);
+    const buttonHref = toStorefrontHref(section.button_url);
 
     if (collectionCategories.length === 0) {
         return null;
@@ -31,18 +40,23 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
         <section className="bg-[#f8f6f1] px-5 py-20 sm:px-8 sm:py-24 lg:px-14 lg:py-32">
             <div className="mx-auto max-w-[1600px]">
                 <header className="mx-auto max-w-2xl text-center">
-                    <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
-                        Collections
-                    </p>
+                    {section.eyebrow && (
+                        <p className="text-[10px] font-medium tracking-[0.2em] text-neutral-500 uppercase">
+                            {section.eyebrow}
+                        </p>
+                    )}
 
-                    <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
-                        Shop by collection
-                    </h2>
+                    {section.title && (
+                        <h2 className="mt-4 font-serif text-4xl leading-tight tracking-[-0.025em] sm:text-5xl">
+                            {section.title}
+                        </h2>
+                    )}
 
-                    <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
-                        Discover a considered selection of pieces designed for
-                        an elegant and versatile wardrobe.
-                    </p>
+                    {section.body && (
+                        <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-600">
+                            {section.body}
+                        </p>
+                    )}
                 </header>
 
                 <div
@@ -54,8 +68,8 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                                 href={`/shop?category=${category.slug}`}
                                 className="group block"
                             >
-                                {category.image_url ? (
-                                    <div className="overflow-hidden bg-[#e5ded5]">
+                                <div className="aspect-[3/4] overflow-hidden bg-[#e5ded5]">
+                                    {category.image_url ? (
                                         <img
                                             src={category.image_url}
                                             alt={
@@ -63,16 +77,14 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                                                 category.name
                                             }
                                             loading="lazy"
-                                            className="block h-auto w-full"
+                                            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
                                         />
-                                    </div>
-                                ) : (
-                                    <div className="aspect-square overflow-hidden bg-[#e5ded5]">
+                                    ) : (
                                         <CategoryPlaceholder
                                             name={category.name}
                                         />
-                                    </div>
-                                )}
+                                    )}
+                                </div>
 
                                 <div className="mt-5 text-center">
                                     <h3 className="font-serif text-2xl">
@@ -88,16 +100,18 @@ export function CollectionsSection({ categories }: CollectionsSectionProps) {
                     ))}
                 </div>
 
-                {categories.length > 3 && (
-                    <div className="mt-12 text-center">
-                        <Link
-                            href="/shop"
-                            className="inline-flex min-h-11 items-center border-b border-neutral-950 text-[10px] font-medium tracking-[0.15em] uppercase transition-opacity hover:opacity-60"
-                        >
-                            View all collections
-                        </Link>
-                    </div>
-                )}
+                {categories.length > 3 &&
+                    section.button_label &&
+                    buttonHref && (
+                        <div className="mt-12 text-center">
+                            <Link
+                                href={buttonHref}
+                                className="inline-flex min-h-11 items-center border-b border-neutral-950 text-[10px] font-medium tracking-[0.15em] uppercase transition-opacity hover:opacity-60"
+                            >
+                                {section.button_label}
+                            </Link>
+                        </div>
+                    )}
             </div>
         </section>
     );

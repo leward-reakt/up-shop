@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Categories\Schemas;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -21,16 +22,35 @@ class CategoryForm
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
-                    ->helperText('Used in storefront category URLs and filters.'),
+                    ->helperText(
+                        'Used in storefront category URLs and filters.',
+                    ),
 
                 Textarea::make('description')
                     ->rows(4)
                     ->columnSpanFull(),
 
+                FileUpload::make('image_path')
+                    ->label('Storefront image')
+                    ->image()
+                    ->disk('public')
+                    ->directory('categories')
+                    ->visibility('public')
+                    ->maxSize(5120)
+                    ->helperText(
+                        'Used for the category card on the homepage Collections section.',
+                    ),
+
+                TextInput::make('image_alt')
+                    ->label('Image alt text')
+                    ->maxLength(255),
+
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true)
-                    ->helperText('Inactive categories are hidden from the storefront.'),
+                    ->helperText(
+                        'Inactive categories are hidden from the storefront.',
+                    ),
             ]);
     }
 }

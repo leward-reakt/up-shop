@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\LandingPageSection;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,8 @@ class HomeController extends Controller
             ),
 
             'categories' => $this->landingCategories(),
+
+            'sections' => $this->landingSections(),
         ]);
     }
 
@@ -112,9 +115,6 @@ class HomeController extends Controller
     }
 
     /**
-     * Category cards reuse the latest active product image instead of
-     * introducing category-specific image storage during the MVP.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function landingCategories(): array
@@ -130,37 +130,74 @@ class HomeController extends Controller
             ->limit(5)
             ->get()
             ->map(function (Category $category): array {
-                /*
-                 * The landing page displays at most five categories, so a
-                 * bounded product lookup here keeps the query simple and
-                 * avoids unnecessary constrained eager-loading complexity.
-                 */
-                $product = $category
-                    ->products()
-                    ->where('is_active', true)
-                    ->with([
-                        'images:id,product_id,path,alt_text,sort_order',
-                    ])
-                    ->latest()
-                    ->first();
+                $mainImage = null;
 
-                $mainImage = $product?->images->first();
+                /*
+                 * Preserve the existing product-image fallback until an
+                 * administrator uploads a dedicated category storefront image.
+                 */
+                if ($category->image_path === null) {
+                    $product = $category
+                        ->products()
+                        ->where('is_active', true)
+                        ->with([
+                            'images:id,product_id,path,alt_text,sort_order',
+                        ])
+                        ->latest()
+                        ->first();
+
+                    $mainImage = $product?->images->first();
+                }
+
+                $imagePath = $category->image_path ?? $mainImage?->path;
 
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
 
-                    'image_url' => $mainImage === null
+                    'image_url' => $imagePath === null
                         ? null
-                        : Storage::disk('public')->url(
-                            $mainImage->path,
-                        ),
+                        : Storage::disk('public')->url($imagePath),
 
-                    'image_alt' => $mainImage?->alt_text,
+                    'image_alt' => $category->image_alt
+                        ?? $mainImage?->alt_text,
                 ];
             })
             ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function landingSections(): array
+    {
+        return LandingPageSection::query()
+            ->where('is_active', true)
+            ->get()
+            ->mapWithKeys(
+                function (LandingPageSection $section): array {
+                    return [
+                        $section->key => [
+                            'key' => $section->key,
+                            'eyebrow' => $section->eyebrow,
+                            'title' => $section->title,
+                            'body' => $section->body,
+                            'button_label' => $section->button_label,
+                            'button_url' => $section->button_url,
+
+                            'image_url' => $section->image_path === null
+                                ? null
+                                : Storage::disk('public')->url(
+                                    $section->image_path,
+                                ),
+
+                            'image_alt' => $section->image_alt,
+                        ],
+                    ];
+                },
+            )
             ->all();
     }
 }

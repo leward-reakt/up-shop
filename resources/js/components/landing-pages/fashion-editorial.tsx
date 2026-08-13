@@ -5,7 +5,10 @@ import { HeroSection } from '@/components/landing-pages/fashion-editorial/hero-s
 import { NewArrivalsSection } from '@/components/landing-pages/fashion-editorial/new-arrivals-section';
 import { SignatureSection } from '@/components/landing-pages/fashion-editorial/signature-section';
 import { StorySection } from '@/components/landing-pages/fashion-editorial/story-section';
-import type { FashionEditorialCategory } from '@/components/landing-pages/fashion-editorial/types';
+import type {
+    FashionEditorialCategory,
+    LandingPageSections,
+} from '@/components/landing-pages/fashion-editorial/types';
 import StorefrontLayout from '@/layouts/storefront-layout';
 import type { CatalogProduct } from '@/types';
 
@@ -15,12 +18,14 @@ type FashionElegantLandingPageProps = {
     categories: FashionEditorialCategory[];
     featuredProducts: CatalogProduct[];
     newArrivals: CatalogProduct[];
+    sections: LandingPageSections;
 };
 
 export default function FashionEditorialLandingPage({
     categories,
     featuredProducts,
     newArrivals,
+    sections,
 }: FashionElegantLandingPageProps) {
     const availableProducts =
         featuredProducts.length > 0 ? featuredProducts : newArrivals;
@@ -47,17 +52,44 @@ export default function FashionEditorialLandingPage({
         >
             <Head title="Home" />
 
-            <HeroSection product={heroProduct} />
+            {sections.hero && (
+                <HeroSection
+                    section={sections.hero}
+                    fallbackProduct={heroProduct}
+                />
+            )}
 
-            <CollectionsSection categories={categories} />
+            {sections.collections && (
+                <CollectionsSection
+                    section={sections.collections}
+                    categories={categories}
+                />
+            )}
 
-            <NewArrivalsSection products={newArrivals} />
+            {sections.new_arrivals && (
+                <NewArrivalsSection
+                    section={sections.new_arrivals}
+                    products={newArrivals}
+                />
+            )}
 
-            <StorySection product={storyProduct} />
+            {sections.story && (
+                <StorySection
+                    section={sections.story}
+                    fallbackProduct={storyProduct}
+                />
+            )}
 
-            <SignatureSection products={availableProducts} />
+            {sections.signature && (
+                <SignatureSection
+                    section={sections.signature}
+                    products={availableProducts}
+                />
+            )}
 
-            <FinalCtaSection />
+            {sections.final_cta && (
+                <FinalCtaSection section={sections.final_cta} />
+            )}
         </StorefrontLayout>
     );
 }
