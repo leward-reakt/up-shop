@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\PaymentMethod;
 use App\Enums\ShippingMethod;
 use App\Models\StoreSetting;
+use App\Models\User;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -22,38 +24,61 @@ class CheckoutRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = Auth::id() ?? 0;
+        $user = Auth::user();
 
-        return [
-            'customer_name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'customer_email' => [
-                'required',
-                'email',
-                'max:255',
-            ],
-            'customer_phone' => [
-                'required',
-                'string',
-                'max:50',
-            ],
+        $hasSavedAddresses = $user instanceof User
+            && $user->addresses()->exists();
 
-            'shipping_address_id' => [
-                'nullable',
+        $userId = $user instanceof User
+            ? (int) $user->id
+            : 0;
+
+        $shippingAddressIdRules = [
+            'nullable',
+        ];
+
+        if ($hasSavedAddresses) {
+            $shippingAddressIdRules = [
+                'required',
                 'integer',
                 Rule::exists('addresses', 'id')->where(
-                    fn ($query) => $query->where(
+                    fn (Builder $query): Builder => $query->where(
                         'user_id',
                         $userId,
                     ),
                 ),
+            ];
+        }
+
+        $requiredContactRule = $hasSavedAddresses
+            ? 'nullable'
+            : 'required';
+
+        $requiredAddressRule = $hasSavedAddresses
+            ? 'nullable'
+            : 'required';
+
+        return [
+            'customer_name' => [
+                $requiredContactRule,
+                'string',
+                'max:255',
+            ],
+            'customer_email' => [
+                $requiredContactRule,
+                'email',
+                'max:255',
+            ],
+            'customer_phone' => [
+                $requiredContactRule,
+                'string',
+                'max:50',
             ],
 
+            'shipping_address_id' => $shippingAddressIdRules,
+
             'shipping_address_line_1' => [
-                'required',
+                $requiredAddressRule,
                 'string',
                 'max:255',
             ],
@@ -63,17 +88,17 @@ class CheckoutRequest extends FormRequest
                 'max:255',
             ],
             'shipping_city' => [
-                'required',
+                $requiredAddressRule,
                 'string',
                 'max:255',
             ],
             'shipping_province' => [
-                'required',
+                $requiredAddressRule,
                 'string',
                 'max:255',
             ],
             'shipping_postal_code' => [
-                'required',
+                $requiredAddressRule,
                 'string',
                 'max:20',
             ],

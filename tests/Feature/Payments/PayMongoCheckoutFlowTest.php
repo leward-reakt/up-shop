@@ -442,8 +442,28 @@ class PayMongoCheckoutFlowTest extends TestCase
 
     public function test_resume_replaces_expired_session_without_duplicate_order_or_inventory_deduction(): void
     {
+        Http::fakeSequence(
+            'https://api.paymongo.com/v2/checkout_sessions',
+        )
+            ->push(
+                $this->checkoutSessionResponse(
+                    'cs_initial_test',
+                    'https://checkout.paymongo.com/cs_initial_test',
+                ),
+                200,
+            )
+            ->push(
+                $this->checkoutSessionResponse(
+                    'cs_replacement_test',
+                    'https://checkout.paymongo.com/cs_replacement_test',
+                ),
+                200,
+            );
+
         [$order, $product] =
-            $this->placePendingPayMongoOrder();
+            $this->placePendingPayMongoOrder(
+                fakeCheckoutSession: false,
+            );
 
         Http::fake([
             'https://api.paymongo.com/v1/checkout_sessions/cs_initial_test' => Http::response(
@@ -452,14 +472,6 @@ class PayMongoCheckoutFlowTest extends TestCase
                     checkoutUrl: 'https://checkout.paymongo.com/cs_initial_test',
                     status: 'expired',
                     referenceNumber: $order->order_number,
-                ),
-                200,
-            ),
-
-            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
-                $this->checkoutSessionResponse(
-                    'cs_replacement_test',
-                    'https://checkout.paymongo.com/cs_replacement_test',
                 ),
                 200,
             ),
@@ -515,21 +527,24 @@ class PayMongoCheckoutFlowTest extends TestCase
     /**
      * @return array{0: Order, 1: Product}
      */
-    private function placePendingPayMongoOrder(): array
-    {
-        Http::fake([
-            'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
-                $this->checkoutSessionResponse(
-                    'cs_initial_test',
-                    'https://checkout.paymongo.com/cs_initial_test',
+    private function placePendingPayMongoOrder(
+        bool $fakeCheckoutSession = true,
+    ): array {
+        if ($fakeCheckoutSession) {
+            Http::fake([
+                'https://api.paymongo.com/v2/checkout_sessions' => Http::response(
+                    $this->checkoutSessionResponse(
+                        'cs_initial_test',
+                        'https://checkout.paymongo.com/cs_initial_test',
+                    ),
+                    200,
                 ),
-                200,
-            ),
-        ]);
+            ]);
+        }
 
         $product = $this->product();
 
-        $this
+        $response = $this
             ->withHeader(
                 'X-Inertia',
                 'true',
@@ -544,8 +559,14 @@ class PayMongoCheckoutFlowTest extends TestCase
                 $this->checkoutPayload(
                     PaymentMethod::GCash,
                 ),
-            )
-            ->assertStatus(409);
+            );
+
+        // withHeader() persists on the Laravel test case. The provider's
+        // success/cancel URLs represent a normal browser navigation and must
+        // not inherit the X-Inertia request header from the checkout POST.
+        $this->withoutHeader('X-Inertia');
+
+        $response->assertStatus(409);
 
         $order = Order::query()
             ->with('payment')

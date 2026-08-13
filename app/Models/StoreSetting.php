@@ -9,6 +9,10 @@ class StoreSetting extends Model
 {
     public const DEFAULT_CURRENCY = 'PHP';
 
+    protected $attributes = [
+        'paymongo_enabled' => false,
+    ];
+
     protected $fillable = [
         'store_name',
         'store_logo_path',

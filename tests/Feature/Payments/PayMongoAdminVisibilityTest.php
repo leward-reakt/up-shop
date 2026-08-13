@@ -204,23 +204,30 @@ class PayMongoAdminVisibilityTest extends TestCase
             'is_active' => true,
         ]);
 
-        $request = $this->withSession([
-            'cart.items' => [
-                $product->id => 1,
-            ],
+        $admin = User::query()
+            ->where('is_admin', true)
+            ->sole();
+
+        $cart = $admin->cart()->create();
+
+        $cart->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
         ]);
 
         if ($paymentMethod->usesPayMongo()) {
-            $request = $request->withHeader(
+            $this->withHeader(
                 'X-Inertia',
                 'true',
             );
         }
 
-        $response = $request->post(
+        $response = $this->post(
             route('checkout.store'),
             $this->checkoutPayload($paymentMethod),
         );
+
+        $this->withoutHeader('X-Inertia');
 
         if ($paymentMethod->usesPayMongo()) {
             $response->assertStatus(409);
