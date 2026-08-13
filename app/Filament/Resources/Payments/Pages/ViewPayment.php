@@ -13,6 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Number;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 
 class ViewPayment extends ViewRecord
 {
@@ -30,7 +31,7 @@ class ViewPayment extends ViewRecord
                     fn (): string => sprintf(
                         'Refund the full payment amount of %s through PayMongo. This action cannot issue a partial refund.',
                         $this->refundAmount(
-                            $this->getRecord(),
+                            $this->paymentRecord(),
                         ),
                     ),
                 )
@@ -39,7 +40,7 @@ class ViewPayment extends ViewRecord
                     fn (): bool => app(
                         RefundPayMongoPayment::class,
                     )->isEligible(
-                        $this->getRecord(),
+                        $this->paymentRecord(),
                     ),
                 )
                 ->action(
@@ -48,7 +49,7 @@ class ViewPayment extends ViewRecord
                             $payment = app(
                                 RefundPayMongoPayment::class,
                             )->handle(
-                                $this->getRecord(),
+                                $this->paymentRecord(),
                             );
                         } catch (
                             ValidationException $exception
@@ -69,7 +70,7 @@ class ViewPayment extends ViewRecord
                             return;
                         }
 
-                        $this->getRecord()->refresh();
+                        $this->paymentRecord()->refresh();
 
                         if (
                             $payment->status
@@ -98,6 +99,19 @@ class ViewPayment extends ViewRecord
 
             EditAction::make(),
         ];
+    }
+
+    private function paymentRecord(): Payment
+    {
+        $record = $this->getRecord();
+
+        if (! $record instanceof Payment) {
+            throw new LogicException(
+                'The payment resource did not resolve to a Payment model.',
+            );
+        }
+
+        return $record;
     }
 
     private function refundAmount(

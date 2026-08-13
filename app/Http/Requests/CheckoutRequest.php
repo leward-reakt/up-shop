@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\ShippingMethod;
 use App\Models\StoreSetting;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -21,7 +22,7 @@ class CheckoutRequest extends FormRequest
      */
     public function rules(): array
     {
-        $user = $this->user();
+        $userId = Auth::id() ?? 0;
 
         return [
             'customer_name' => [
@@ -46,7 +47,7 @@ class CheckoutRequest extends FormRequest
                 Rule::exists('addresses', 'id')->where(
                     fn ($query) => $query->where(
                         'user_id',
-                        $user?->id ?? 0,
+                        $userId,
                     ),
                 ),
             ],

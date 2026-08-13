@@ -119,13 +119,24 @@ class ResumePayMongoCheckoutSession
             },
         );
 
-        if (! is_array($result)) {
+        if (
+            ! is_array($result)
+            || ! isset(
+                $result['checkout_id'],
+                $result['checkout_url'],
+            )
+            || ! is_string($result['checkout_id'])
+            || ! is_string($result['checkout_url'])
+        ) {
             throw ValidationException::withMessages([
                 'payment' => 'Payment is already being resumed. Please wait a moment.',
             ]);
         }
 
-        return $result;
+        return [
+            'checkout_id' => $result['checkout_id'],
+            'checkout_url' => $result['checkout_url'],
+        ];
     }
 
     private function assertCanResume(Order $order): void

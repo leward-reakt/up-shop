@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Notifications\PaymentConfirmedNotification;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -175,8 +176,7 @@ class ReconcilePayMongoWebhook
 
                 if (
                     $payment->provider_payment_intent_id !== null
-                    && $payment->provider_payment_intent_id
-                        !== $paymentIntentId
+                    && $payment->provider_payment_intent_id !== $paymentIntentId
                 ) {
                     throw new UnexpectedValueException(
                         'PayMongo Payment Intent ID conflicts with the local payment.',
@@ -185,8 +185,7 @@ class ReconcilePayMongoWebhook
 
                 if (
                     $payment->provider_payment_id !== null
-                    && $payment->provider_payment_id
-                        !== $providerPaymentId
+                    && $payment->provider_payment_id !== $providerPaymentId
                 ) {
                     throw new UnexpectedValueException(
                         'PayMongo Payment ID conflicts with the local payment.',
@@ -215,12 +214,10 @@ class ReconcilePayMongoWebhook
                 // A delayed duplicate paid webhook must never regress a
                 // payment that has already completed a refund workflow.
                 if ($payment->status !== PaymentStatus::Refunded) {
-                    $becamePaid = $payment->status
-                        !== PaymentStatus::Paid;
+                    $becamePaid = $payment->status !== PaymentStatus::Paid;
 
                     $updates['status'] = PaymentStatus::Paid;
-                    $updates['paid_at'] = $payment->paid_at
-                        ?? $paidAt;
+                    $updates['paid_at'] = $payment->paid_at ?? $paidAt;
                     $updates['failed_at'] = null;
 
                     $order->update([
@@ -296,7 +293,7 @@ class ReconcilePayMongoWebhook
     /**
      * @param  array<string, mixed>  $paidPayment
      */
-    private function paidAt(array $paidPayment): Carbon
+    private function paidAt(array $paidPayment): CarbonInterface
     {
         $paidAt = data_get(
             $paidPayment,

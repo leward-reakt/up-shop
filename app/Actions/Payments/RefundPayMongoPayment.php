@@ -307,11 +307,7 @@ class RefundPayMongoPayment
             ]);
         }
 
-        if (
-            ! isset($refund['id'])
-            || ! is_string($refund['id'])
-            || trim($refund['id']) === ''
-        ) {
+        if (trim($refund['id']) === '') {
             throw ValidationException::withMessages([
                 'refund' => 'The PayMongo refund reference is invalid.',
             ]);
